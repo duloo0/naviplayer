@@ -630,6 +630,11 @@ final class AudioEngine: ObservableObject {
             currentTime: currentTime,
             isPlaying: playbackState == .playing
         )
+
+        // Notify server that this track is now playing (for scrobbling)
+        Task {
+            try? await client.scrobble(id: track.id, submission: false)
+        }
     }
 
     private func loadImage(from url: URL) async -> UIImage? {
