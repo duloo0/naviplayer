@@ -155,10 +155,15 @@ extension Track {
             case .hiRes: return "Hi-Res"
             case .lossless: return "Lossless"
             case .dsd: return "DSD"
-            case .lossy: return suffix?.uppercased() ?? "Audio"
+            case .lossy: return "Audio"
             }
+        }
 
-            var suffix: String? { nil }
+        func displayName(withSuffix suffix: String?) -> String {
+            switch self {
+            case .lossy: return suffix?.uppercased() ?? "Audio"
+            default: return displayName
+            }
         }
     }
 

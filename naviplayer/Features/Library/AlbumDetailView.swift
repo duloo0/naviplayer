@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import Combine
 
 struct AlbumDetailView: View {
     let albumId: String
