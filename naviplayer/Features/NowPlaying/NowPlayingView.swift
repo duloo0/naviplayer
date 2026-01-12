@@ -88,10 +88,13 @@ struct NowPlayingView: View {
 
                         // Signal path (expandable)
                         if showSignalPath, let track = viewModel.currentTrack {
-                            SignalPathView(track: track, outputDevice: "iPhone Speaker")
-                                .padding(.top, Spacing.lg)
-                                .padding(.horizontal, Spacing.Page.horizontal)
-                                .transition(.slideFromBottom)
+                            EnhancedSignalPathView(
+                                track: track,
+                                outputDevice: audioEngine.currentOutputDevice
+                            )
+                            .padding(.top, Spacing.lg)
+                            .padding(.horizontal, Spacing.Page.horizontal)
+                            .transition(.slideFromBottom)
                         }
 
                         // Lyrics (expandable)

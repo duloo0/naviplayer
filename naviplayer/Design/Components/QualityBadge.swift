@@ -128,7 +128,132 @@ struct FormatDisplay: View {
     }
 }
 
-// MARK: - Signal Path Display (Roon-style)
+// MARK: - Enhanced Signal Path Display (Roon-style)
+struct EnhancedSignalPathView: View {
+    let track: Track
+    let outputDevice: String
+    @State private var isExpanded = false
+
+    init(track: Track, outputDevice: String = "Device") {
+        self.track = track
+        self.outputDevice = outputDevice
+    }
+
+    private var signalPath: SignalPath {
+        SignalPath.build(from: track, outputDevice: outputDevice)
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Header with quality indicator
+            signalPathHeader
+
+            // Expanded signal path detail
+            if isExpanded {
+                signalPathDetail
+                    .padding(.top, Spacing.md)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
+        .padding(Spacing.md)
+        .background(Color.Background.surface)
+        .cornerRadius(CornerRadius.md)
+        .animation(.Navi.smooth, value: isExpanded)
+    }
+
+    private var signalPathHeader: some View {
+        Button {
+            isExpanded.toggle()
+        } label: {
+            HStack(spacing: Spacing.sm) {
+                // Quality light indicator
+                Circle()
+                    .fill(signalPath.overallQuality.color)
+                    .frame(width: 8, height: 8)
+                    .shadow(color: signalPath.overallQuality.color.opacity(0.5), radius: 4)
+
+                Text("Signal Path")
+                    .font(.Navi.labelMedium)
+                    .foregroundColor(Color.Text.primary)
+
+                Text("•")
+                    .foregroundColor(Color.Text.tertiary)
+
+                Text(signalPath.overallQuality.label)
+                    .font(.Navi.caption)
+                    .foregroundColor(signalPath.overallQuality.color)
+
+                Spacer()
+
+                Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(Color.Text.tertiary)
+            }
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var signalPathDetail: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ForEach(Array(signalPath.stages.enumerated()), id: \.element.id) { index, stage in
+                HStack(alignment: .top, spacing: Spacing.md) {
+                    // Quality indicator line
+                    VStack(spacing: 0) {
+                        if index > 0 {
+                            Rectangle()
+                                .fill(stage.quality.color.opacity(0.6))
+                                .frame(width: 2, height: 8)
+                        } else {
+                            Color.clear.frame(width: 2, height: 8)
+                        }
+
+                        Circle()
+                            .fill(stage.quality.color)
+                            .frame(width: 10, height: 10)
+                            .shadow(color: stage.quality.color.opacity(0.4), radius: 3)
+
+                        if index < signalPath.stages.count - 1 {
+                            Rectangle()
+                                .fill(stage.quality.color.opacity(0.6))
+                                .frame(width: 2, height: 20)
+                        }
+                    }
+                    .frame(width: 16)
+
+                    // Stage info
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack(spacing: Spacing.xs) {
+                            Image(systemName: stage.icon)
+                                .font(.system(size: 11))
+                                .foregroundColor(stage.quality.color)
+                                .frame(width: 14)
+
+                            Text(stage.name)
+                                .font(.Navi.labelSmall)
+                                .foregroundColor(Color.Text.primary)
+                        }
+
+                        Text(stage.detail)
+                            .font(.Navi.monoSmall)
+                            .foregroundColor(Color.Text.tertiary)
+
+                        // Sample rate/bit depth if available
+                        if let specs = stage.formattedSpecs {
+                            Text(specs)
+                                .font(.Navi.monoSmall)
+                                .foregroundColor(Color.Text.tertiary.opacity(0.7))
+                        }
+                    }
+                    .padding(.bottom, index < signalPath.stages.count - 1 ? Spacing.xs : 0)
+
+                    Spacer()
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Legacy Signal Path Display (Horizontal)
 struct SignalPathView: View {
     let track: Track
     let outputDevice: String

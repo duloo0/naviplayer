@@ -368,6 +368,88 @@ final class SubsonicClient: ObservableObject {
         try await search(SearchParameters(query: query))
     }
 
+    // MARK: - Playlists
+
+    /// Get all playlists
+    func getPlaylists() async throws -> [Playlist] {
+        let response: PlaylistsResponse = try await request(endpoint: "getPlaylists")
+        return response.allPlaylists
+    }
+
+    /// Get single playlist with tracks
+    func getPlaylist(id: String) async throws -> Playlist {
+        let response: PlaylistResponse = try await request(
+            endpoint: "getPlaylist",
+            parameters: ["id": id]
+        )
+        guard let playlist = response.playlist else {
+            throw SubsonicAPIError.unexpectedResponse
+        }
+        return playlist
+    }
+
+    /// Create a new playlist
+    func createPlaylist(name: String, songIds: [String]? = nil) async throws -> Playlist {
+        var params: [String: String] = ["name": name]
+
+        if let songIds = songIds, !songIds.isEmpty {
+            // Use requestWithIds for multiple song IDs
+            let response: PlaylistResponse = try await requestWithIds(
+                endpoint: "createPlaylist",
+                ids: songIds,
+                parameters: params
+            )
+            guard let playlist = response.playlist else {
+                throw SubsonicAPIError.unexpectedResponse
+            }
+            return playlist
+        } else {
+            let response: PlaylistResponse = try await request(
+                endpoint: "createPlaylist",
+                parameters: params
+            )
+            guard let playlist = response.playlist else {
+                throw SubsonicAPIError.unexpectedResponse
+            }
+            return playlist
+        }
+    }
+
+    /// Delete a playlist
+    func deletePlaylist(id: String) async throws {
+        let _: EmptyResponse = try await request(
+            endpoint: "deletePlaylist",
+            parameters: ["id": id]
+        )
+    }
+
+    /// Update playlist (name, comment, public status)
+    func updatePlaylist(
+        id: String,
+        name: String? = nil,
+        comment: String? = nil,
+        isPublic: Bool? = nil
+    ) async throws {
+        var params: [String: String] = ["playlistId": id]
+        if let name = name { params["name"] = name }
+        if let comment = comment { params["comment"] = comment }
+        if let isPublic = isPublic { params["public"] = String(isPublic) }
+
+        let _: EmptyResponse = try await request(
+            endpoint: "updatePlaylist",
+            parameters: params
+        )
+    }
+
+    /// Add songs to a playlist
+    func addToPlaylist(playlistId: String, songIds: [String]) async throws {
+        let _: EmptyResponse = try await requestWithIds(
+            endpoint: "updatePlaylist",
+            ids: songIds,
+            parameters: ["playlistId": playlistId]
+        )
+    }
+
     // MARK: - Play Queue
 
     /// Get saved play queue
