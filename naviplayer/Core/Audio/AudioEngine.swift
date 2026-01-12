@@ -19,6 +19,8 @@ final class AudioEngine: ObservableObject {
     @Published private(set) var duration: TimeInterval = 0
     @Published private(set) var progress: Double = 0
     @Published private(set) var isBuffering = false
+    @Published private(set) var bufferProgress: Double = 0
+    @Published private(set) var currentOutputDevice: String = "iPhone Speaker"
 
     // MARK: - Queue State
     @Published private(set) var queue: [Track] = []
@@ -519,6 +521,59 @@ final class AudioEngine: ObservableObject {
 // MARK: - Convenience Extensions
 
 extension AudioEngine {
+    /// Update the rating of the current track (local state only)
+    func updateCurrentTrackRating(_ rating: Int) {
+        guard let track = currentTrack, currentIndex < queue.count else { return }
+
+        // Create updated track with new rating
+        let updatedTrack = Track(
+            id: track.id,
+            parent: track.parent,
+            isDir: track.isDir,
+            title: track.title,
+            album: track.album,
+            artist: track.artist,
+            track: track.track,
+            year: track.year,
+            genre: track.genre,
+            coverArt: track.coverArt,
+            size: track.size,
+            contentType: track.contentType,
+            suffix: track.suffix,
+            duration: track.duration,
+            bitRate: track.bitRate,
+            path: track.path,
+            discNumber: track.discNumber,
+            albumId: track.albumId,
+            artistId: track.artistId,
+            playCount: track.playCount,
+            starred: track.starred,
+            userRating: rating,
+            samplingRate: track.samplingRate,
+            bitDepth: track.bitDepth,
+            channelCount: track.channelCount,
+            displayArtist: track.displayArtist,
+            displayComposer: track.displayComposer,
+            genres: track.genres,
+            contributors: track.contributors,
+            replayGain: track.replayGain,
+            musicBrainzId: track.musicBrainzId,
+            isrc: track.isrc,
+            lastfmListeners: track.lastfmListeners,
+            lastfmPlaycount: track.lastfmPlaycount,
+            bpm: track.bpm,
+            comment: track.comment,
+            sortName: track.sortName,
+            mediaType: track.mediaType,
+            played: track.played,
+            explicitStatus: track.explicitStatus
+        )
+
+        // Update queue and current track
+        queue[currentIndex] = updatedTrack
+        currentTrack = updatedTrack
+    }
+
     /// Current track's cover art URL
     var coverArtURL: URL? {
         client.coverArtURL(for: currentTrack?.coverArt, size: 600)

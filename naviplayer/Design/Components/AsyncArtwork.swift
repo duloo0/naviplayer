@@ -2,10 +2,90 @@
 //  AsyncArtwork.swift
 //  naviplayer
 //
-//  Async artwork loading with placeholder and blur effects
+//  Async artwork loading with placeholder, caching, and blur effects
 //
 
 import SwiftUI
+
+// MARK: - Image Cache
+actor ImageCache {
+    static let shared = ImageCache()
+
+    private var cache: [URL: UIImage] = [:]
+    private let maxCacheSize = 100
+
+    func image(for url: URL) -> UIImage? {
+        cache[url]
+    }
+
+    func setImage(_ image: UIImage, for url: URL) {
+        // Evict oldest if at capacity
+        if cache.count >= maxCacheSize {
+            cache.removeValue(forKey: cache.keys.first!)
+        }
+        cache[url] = image
+    }
+}
+
+// MARK: - Cached Image View
+struct CachedAsyncImage: View {
+    let url: URL?
+    @State private var image: UIImage?
+    @State private var isLoading = false
+
+    var body: some View {
+        Group {
+            if let image = image {
+                Image(uiImage: image)
+                    .resizable()
+            } else {
+                Color.Background.elevated
+                    .overlay(
+                        Group {
+                            if isLoading {
+                                ProgressView()
+                                    .progressViewStyle(CircularProgressViewStyle(tint: Color.Text.tertiary))
+                                    .scaleEffect(0.8)
+                            } else {
+                                Image(systemName: "music.note")
+                                    .font(.system(size: 40, weight: .light))
+                                    .foregroundColor(Color.Text.tertiary)
+                            }
+                        }
+                    )
+            }
+        }
+        .task(id: url) {
+            await loadImage()
+        }
+    }
+
+    private func loadImage() async {
+        guard let url = url else {
+            image = nil
+            return
+        }
+
+        // Check cache first
+        if let cached = await ImageCache.shared.image(for: url) {
+            image = cached
+            return
+        }
+
+        isLoading = true
+        defer { isLoading = false }
+
+        do {
+            let (data, _) = try await URLSession.shared.data(from: url)
+            if let loadedImage = UIImage(data: data) {
+                await ImageCache.shared.setImage(loadedImage, for: url)
+                image = loadedImage
+            }
+        } catch {
+            image = nil
+        }
+    }
+}
 
 // MARK: - Async Artwork
 struct AsyncArtwork: View {
@@ -14,24 +94,12 @@ struct AsyncArtwork: View {
     var cornerRadius: CGFloat = CornerRadius.lg
 
     var body: some View {
-        AsyncImage(url: url) { phase in
-            switch phase {
-            case .empty:
-                ArtworkPlaceholder(size: size)
-            case .success(let image):
-                image
-                    .resizable()
-                    .aspectRatio(1, contentMode: .fill)
-                    .frame(width: size, height: size)
-                    .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
-            case .failure:
-                ArtworkPlaceholder(size: size)
-            @unknown default:
-                ArtworkPlaceholder(size: size)
-            }
-        }
-        .frame(width: size, height: size)
-        .shadow(color: .black.opacity(0.4), radius: 20, y: 10)
+        CachedAsyncImage(url: url)
+            .aspectRatio(1, contentMode: .fill)
+            .frame(width: size, height: size)
+            .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+            .shadow(color: .black.opacity(0.4), radius: 20, y: 10)
+            .animation(.easeInOut(duration: 0.2), value: url)
     }
 }
 
@@ -58,20 +126,49 @@ struct BlurredArtworkBackground: View {
     var blurRadius: CGFloat = 60
     var opacity: Double = 0.5
 
+    @State private var image: UIImage?
+
     var body: some View {
-        AsyncImage(url: url) { phase in
-            switch phase {
-            case .success(let image):
-                image
+        Group {
+            if let image = image {
+                Image(uiImage: image)
                     .resizable()
                     .aspectRatio(contentMode: .fill)
                     .blur(radius: blurRadius)
                     .opacity(opacity)
-            default:
+            } else {
                 Color.Background.default
             }
         }
         .ignoresSafeArea()
+        .task(id: url) {
+            await loadImage()
+        }
+        .animation(.easeInOut(duration: 0.3), value: image != nil)
+    }
+
+    private func loadImage() async {
+        guard let url = url else {
+            image = nil
+            return
+        }
+
+        // Check cache first
+        if let cached = await ImageCache.shared.image(for: url) {
+            image = cached
+            return
+        }
+
+        // Load from network
+        do {
+            let (data, _) = try await URLSession.shared.data(from: url)
+            if let loadedImage = UIImage(data: data) {
+                await ImageCache.shared.setImage(loadedImage, for: url)
+                image = loadedImage
+            }
+        } catch {
+            image = nil
+        }
     }
 }
 
@@ -97,23 +194,10 @@ struct MiniArtwork: View {
     var cornerRadius: CGFloat = CornerRadius.sm
 
     var body: some View {
-        AsyncImage(url: url) { phase in
-            switch phase {
-            case .success(let image):
-                image
-                    .resizable()
-                    .aspectRatio(1, contentMode: .fill)
-            default:
-                ZStack {
-                    Color.Background.elevated
-                    Image(systemName: "music.note")
-                        .font(.system(size: size * 0.4))
-                        .foregroundColor(Color.Text.tertiary)
-                }
-            }
-        }
-        .frame(width: size, height: size)
-        .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+        CachedAsyncImage(url: url)
+            .aspectRatio(1, contentMode: .fill)
+            .frame(width: size, height: size)
+            .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
     }
 }
 

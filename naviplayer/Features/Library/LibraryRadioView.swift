@@ -51,9 +51,11 @@ struct LibraryRadioView: View {
                         filtersSection
                             .padding(.top, Spacing.xl2)
 
-                        Spacer(minLength: Spacing.xl3)
+                        // Extra space for mini player + tab bar
+                        Spacer(minLength: 120)
                     }
                     .padding(.horizontal, Spacing.Page.horizontal)
+                    .padding(.bottom, Spacing.lg)
                 }
             } else {
                 emptyView
@@ -339,6 +341,9 @@ final class LibraryRadioViewModel: ObservableObject {
 
         do {
             try await client.setRating(id: track.id, rating: rating)
+
+            // Update local track state immediately for UI feedback
+            audioEngine.updateCurrentTrackRating(rating)
 
             // If thumb down (rating 1), skip to next track
             // Because thumb-down songs are excluded from radio

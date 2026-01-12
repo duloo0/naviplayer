@@ -50,7 +50,7 @@ struct ContentView: View {
 
                 // Radio Tab
                 NavigationStack {
-                    LibraryRadioView()
+                    RadioMenuView()
                 }
                 .tabItem {
                     Label("Radio", systemImage: "radio")
