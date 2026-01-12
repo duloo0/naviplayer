@@ -15,6 +15,7 @@ struct ContentView: View {
 
     enum Tab {
         case library
+        case playlists
         case radio
         case search
         case settings
@@ -47,6 +48,15 @@ struct ContentView: View {
                     Label("Library", systemImage: "music.note.house")
                 }
                 .tag(Tab.library)
+
+                // Playlists Tab
+                NavigationStack {
+                    PlaylistsView()
+                }
+                .tabItem {
+                    Label("Playlists", systemImage: "music.note.list")
+                }
+                .tag(Tab.playlists)
 
                 // Radio Tab
                 NavigationStack {
@@ -87,6 +97,9 @@ struct ContentView: View {
         }
         .sheet(isPresented: $showNowPlaying) {
             NowPlayingView()
+                .presentationDetents([.large])
+                .presentationCornerRadius(24)
+                .presentationBackground(.ultraThinMaterial)
         }
     }
 }

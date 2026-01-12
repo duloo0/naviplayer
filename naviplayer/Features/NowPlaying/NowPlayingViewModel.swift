@@ -24,9 +24,14 @@ final class NowPlayingViewModel: ObservableObject {
     @Published var shuffleEnabled: Bool = false
     @Published var repeatMode: AudioEngine.RepeatMode = .off
 
+    // Color extraction
+    @Published var dominantColor: Color = Color.Accent.cyan
+    @Published var secondaryColor: Color = Color.Background.elevated
+
     // MARK: - Dependencies
     private let audioEngine = AudioEngine.shared
     private let client = SubsonicClient.shared
+    private let colorExtractor = ColorExtractor.shared
     private var cancellables = Set<AnyCancellable>()
 
     // MARK: - Computed Properties
@@ -61,10 +66,11 @@ final class NowPlayingViewModel: ObservableObject {
             .sink { [weak self] track in
                 self?.currentTrack = track
                 self?.isLoved = track?.isStarred ?? false
-                // Load lyrics when track changes
+                // Load lyrics and extract colors when track changes
                 if track != nil {
                     Task { [weak self] in
                         await self?.loadLyrics()
+                        await self?.extractColors()
                     }
                 }
             }
@@ -170,5 +176,13 @@ final class NowPlayingViewModel: ObservableObject {
             print("Failed to load lyrics: \(error)")
             lyrics = nil
         }
+    }
+
+    // MARK: - Color Extraction
+
+    func extractColors() async {
+        let colors = await colorExtractor.extractColors(from: coverArtURL)
+        dominantColor = colors.dominant
+        secondaryColor = colors.secondary
     }
 }

@@ -200,12 +200,26 @@ struct NowPlayingView: View {
 
     // MARK: - Artwork Section
     private func artworkSection(geometry: GeometryProxy) -> some View {
-        let artworkSize = min(geometry.size.width - Spacing.Page.horizontal * 2, 320)
+        let artworkSize = min(geometry.size.width - Spacing.Page.horizontal * 2, 360)
 
         return AsyncArtwork(
             url: viewModel.coverArtURL,
             size: artworkSize,
             cornerRadius: CornerRadius.lg
+        )
+        .shadow(color: viewModel.dominantColor.opacity(0.5), radius: 40, y: 20)
+        .gesture(
+            DragGesture(minimumDistance: 50)
+                .onEnded { value in
+                    let horizontalAmount = value.translation.width
+                    if horizontalAmount < -50 {
+                        // Swipe left - next track
+                        viewModel.next()
+                    } else if horizontalAmount > 50 {
+                        // Swipe right - previous track
+                        viewModel.previous()
+                    }
+                }
         )
         .padding(.top, Spacing.lg)
     }
