@@ -77,6 +77,7 @@ struct MiniPlayer: View {
                     .frame(height: 1),
                 alignment: .top
             )
+            .background(Color.Background.elevated) // Extend background under safe area
             .scaleEffect(isPressed ? 0.98 : 1.0)
             .animation(.Navi.fast, value: isPressed)
             .contentShape(Rectangle())

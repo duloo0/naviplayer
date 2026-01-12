@@ -76,9 +76,9 @@ struct ContentView: View {
                 .tag(Tab.settings)
             }
             .tint(Color.Accent.cyan)
-            .safeAreaInset(edge: .bottom) {
-                // Mini Player (above tab bar)
-                if audioEngine.currentTrack != nil {
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                // Mini Player (above tab bar) - hidden when full player is showing
+                if audioEngine.currentTrack != nil && !showNowPlaying {
                     MiniPlayer(audioEngine: audioEngine) {
                         showNowPlaying = true
                     }

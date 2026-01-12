@@ -43,9 +43,29 @@ final class AudioEngine: ObservableObject {
 
     private let client = SubsonicClient.shared
     private let nowPlayingManager = NowPlayingManager()
+    private let networkMonitor = NetworkMonitor.shared
+    private var audioRouteObserver: AnyCancellable?
 
-    // Pre-cache settings
-    private let preloadCount = 3
+    // Adaptive pre-cache settings
+    private var preloadCount: Int {
+        let networkRecommended = networkMonitor.recommendedPreloadCount
+        let durationBased = adaptivePreloadForDuration
+        return min(networkRecommended, durationBased)
+    }
+
+    private var adaptivePreloadForDuration: Int {
+        let avgDuration = averageTrackDuration
+        if avgDuration < 180 { return 5 }      // Short tracks: preload more
+        else if avgDuration < 300 { return 3 } // Medium tracks
+        else { return 2 }                       // Long tracks: preload less
+    }
+
+    private var averageTrackDuration: TimeInterval {
+        guard !queue.isEmpty else { return 240 }
+        let upcoming = Array(queue.dropFirst(currentIndex)).prefix(10)
+        let total = upcoming.reduce(0.0) { $0 + $1.durationInterval }
+        return total / Double(max(upcoming.count, 1))
+    }
 
     // MARK: - Singleton
     static let shared = AudioEngine()
@@ -53,6 +73,30 @@ final class AudioEngine: ObservableObject {
     private init() {
         setupAudioSession()
         setupRemoteCommands()
+        observeAudioRoute()
+        updateOutputDevice()
+    }
+
+    // MARK: - Audio Route Observation
+
+    private func observeAudioRoute() {
+        audioRouteObserver = NotificationCenter.default
+            .publisher(for: AVAudioSession.routeChangeNotification)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                Task { @MainActor in
+                    self?.updateOutputDevice()
+                }
+            }
+    }
+
+    private func updateOutputDevice() {
+        let route = AVAudioSession.sharedInstance().currentRoute
+        if let output = route.outputs.first {
+            currentOutputDevice = output.portName
+        } else {
+            currentOutputDevice = "System Output"
+        }
     }
 
     // MARK: - Audio Session Setup
@@ -353,6 +397,8 @@ final class AudioEngine: ObservableObject {
     private func observePlayerItem(_ item: AVPlayerItem, for track: Track) {
         // Clear old observers
         itemObservers.removeAll()
+        hasTriggeredPreload = false
+        hasInsertedNextItem = false
 
         // Observe status
         item.publisher(for: \.status)
@@ -378,6 +424,22 @@ final class AudioEngine: ObservableObject {
             }
             .store(in: &itemObservers)
 
+        // Observe buffer progress for smooth playback
+        item.publisher(for: \.loadedTimeRanges)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] ranges in
+                guard let self = self,
+                      let range = ranges.first?.timeRangeValue else { return }
+
+                let bufferedDuration = CMTimeGetSeconds(range.start) + CMTimeGetSeconds(range.duration)
+                let totalDuration = CMTimeGetSeconds(item.duration)
+
+                if totalDuration > 0 && !totalDuration.isNaN {
+                    self.bufferProgress = bufferedDuration / totalDuration
+                }
+            }
+            .store(in: &itemObservers)
+
         // Observe when item finishes
         NotificationCenter.default.publisher(for: .AVPlayerItemDidPlayToEndTime, object: item)
             .receive(on: DispatchQueue.main)
@@ -395,8 +457,27 @@ final class AudioEngine: ObservableObject {
             try? await client.scrobble(id: track.id)
         }
 
-        // Play next
-        await next()
+        // Check if AVQueuePlayer auto-advanced (true gapless)
+        if let currentItem = player?.currentItem,
+           let nextIndex = queue.indices.first(where: { playerItems[queue[$0].id] === currentItem }),
+           nextIndex != currentIndex {
+            // Player auto-advanced, update our state
+            currentIndex = nextIndex
+            let nextTrack = queue[nextIndex]
+            currentTrack = nextTrack
+            duration = nextTrack.durationInterval
+            currentTime = 0
+            progress = 0
+            bufferProgress = 0
+            hasTriggeredPreload = false
+            hasInsertedNextItem = false
+
+            await updateNowPlaying(for: nextTrack)
+            preloadUpcomingTracks()
+        } else {
+            // Manual advancement needed
+            await next()
+        }
     }
 
     // MARK: - Pre-caching
@@ -460,8 +541,13 @@ final class AudioEngine: ObservableObject {
 
     // MARK: - Time Observer
 
+    private var hasTriggeredPreload = false
+    private var hasInsertedNextItem = false
+
     private func setupTimeObserver() {
         removeTimeObserver()
+        hasTriggeredPreload = false
+        hasInsertedNextItem = false
 
         let interval = CMTime(seconds: 0.5, preferredTimescale: 600)
         timeObserver = player?.addPeriodicTimeObserver(forInterval: interval, queue: .main) { [weak self] time in
@@ -470,6 +556,18 @@ final class AudioEngine: ObservableObject {
                 self.currentTime = time.seconds
                 if self.duration > 0 {
                     self.progress = time.seconds / self.duration
+
+                    // Trigger preload when 80% through current track
+                    if self.progress > 0.8 && !self.hasTriggeredPreload {
+                        self.hasTriggeredPreload = true
+                        self.preloadUpcomingTracks()
+                    }
+
+                    // Insert preloaded item into queue when 95% through
+                    if self.progress > 0.95 && !self.hasInsertedNextItem {
+                        self.hasInsertedNextItem = true
+                        self.ensureNextItemInQueue()
+                    }
                 }
 
                 // Update now playing less frequently
@@ -480,6 +578,32 @@ final class AudioEngine: ObservableObject {
                     )
                 }
             }
+        }
+    }
+
+    /// Insert the next track's player item into AVQueuePlayer for true gapless
+    private func ensureNextItemInQueue() {
+        guard let player = player else { return }
+
+        // Only insert if queue has space for one more item
+        guard player.items().count < 2 else { return }
+
+        let nextIndex = currentIndex + 1
+        guard nextIndex < queue.count else { return }
+
+        let nextTrack = queue[nextIndex]
+
+        // Get cached item or create new one
+        if let cachedItem = playerItems[nextTrack.id] {
+            // Check if not already in queue
+            if !player.items().contains(cachedItem) {
+                player.insert(cachedItem, after: nil)
+            }
+        } else if let url = client.streamURL(for: nextTrack) {
+            let asset = AVURLAsset(url: url)
+            let item = AVPlayerItem(asset: asset)
+            playerItems[nextTrack.id] = item
+            player.insert(item, after: nil)
         }
     }
 
