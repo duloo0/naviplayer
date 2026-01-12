@@ -47,7 +47,7 @@ struct Track: Codable, Identifiable, Equatable, Hashable {
     let contributors: [Contributor]?
     let replayGain: ReplayGain?
     let musicBrainzId: String?
-    let isrc: String?
+    let isrc: [String]?  // Can have multiple ISRCs
 
     // MARK: - Last.fm Popularity
     let lastfmListeners: Int64?
