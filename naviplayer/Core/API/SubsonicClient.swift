@@ -390,7 +390,7 @@ final class SubsonicClient: ObservableObject {
 
     /// Create a new playlist
     func createPlaylist(name: String, songIds: [String]? = nil) async throws -> Playlist {
-        var params: [String: String] = ["name": name]
+        let params: [String: String] = ["name": name]
 
         if let songIds = songIds, !songIds.isEmpty {
             // Use requestWithIds for multiple song IDs

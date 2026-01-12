@@ -10,7 +10,7 @@ import UIKit
 import CoreImage
 
 @MainActor
-final class ColorExtractor: ObservableObject {
+final class ColorExtractor {
     // MARK: - Singleton
     static let shared = ColorExtractor()
 
