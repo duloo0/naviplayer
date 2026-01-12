@@ -61,6 +61,21 @@ final class SubsonicClient: ObservableObject {
         // Load saved configuration
         if let saved = ServerConfiguration.load() {
             self.configuration = saved
+            self.isConnected = true
+        }
+    }
+
+    /// Verify saved connection is still valid (call on app launch)
+    func verifyConnection() async {
+        guard configuration != nil else { return }
+
+        do {
+            try await ping()
+            isConnected = true
+        } catch {
+            // Connection failed - user will need to re-login
+            print("Saved connection failed verification: \(error)")
+            isConnected = false
         }
     }
 

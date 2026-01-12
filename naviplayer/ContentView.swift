@@ -29,6 +29,10 @@ struct ContentView: View {
             }
         }
         .preferredColorScheme(.dark)
+        .task {
+            // Verify saved connection is still valid on app launch
+            await client.verifyConnection()
+        }
     }
 
     // MARK: - Main Tab View
