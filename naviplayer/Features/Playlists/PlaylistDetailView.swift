@@ -279,7 +279,7 @@ struct PlaylistDetailView: View {
                 AsyncArtwork(
                     url: SubsonicClient.shared.coverArtURL(for: track.coverArt, size: 80),
                     size: 40,
-                    cornerRadius: CornerRadius.xs
+                    cornerRadius: CornerRadius.sm
                 )
 
                 // Track info
