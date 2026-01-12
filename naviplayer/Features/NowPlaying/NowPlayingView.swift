@@ -21,7 +21,7 @@ struct NowPlayingView: View {
     }
 
     private var artworkSize: CGFloat {
-        isCompact ? 200 : 280
+        isCompact ? 160 : 240
     }
 
     private var titleSize: CGFloat {
@@ -68,7 +68,7 @@ struct NowPlayingView: View {
             .ignoresSafeArea()
 
             // Main content
-            VStack(spacing: 0) {
+            VStack(spacing: isCompact ? 12 : 16) {
                 // Header
                 HStack {
                     Button {
@@ -108,9 +108,6 @@ struct NowPlayingView: View {
                     }
                 }
                 .padding(.horizontal, 16)
-                .padding(.top, 8)
-
-                Spacer(minLength: isCompact ? 8 : 16)
 
                 // Artwork
                 AsyncArtwork(
@@ -120,8 +117,6 @@ struct NowPlayingView: View {
                 )
                 .frame(width: artworkSize, height: artworkSize)
                 .shadow(color: .black.opacity(0.3), radius: 20, x: 0, y: 10)
-
-                Spacer(minLength: isCompact ? 12 : 24)
 
                 // Track info
                 VStack(spacing: 4) {
@@ -141,13 +136,10 @@ struct NowPlayingView: View {
                 // Quality badge
                 if let track = viewModel.currentTrack {
                     QualityBadge(track: track, showSpecs: true)
-                        .padding(.top, 8)
                 }
 
-                Spacer(minLength: isCompact ? 12 : 20)
-
                 // Progress slider
-                VStack(spacing: 8) {
+                VStack(spacing: 6) {
                     Slider(
                         value: Binding(
                             get: { viewModel.progress },
@@ -161,19 +153,17 @@ struct NowPlayingView: View {
 
                     HStack {
                         Text(formatTime(viewModel.currentTime))
-                            .font(.system(size: 12, weight: .medium, design: .monospaced))
+                            .font(.system(size: 11, weight: .medium, design: .monospaced))
                             .foregroundColor(.white.opacity(0.6))
 
                         Spacer()
 
                         Text(formatTime(viewModel.duration))
-                            .font(.system(size: 12, weight: .medium, design: .monospaced))
+                            .font(.system(size: 11, weight: .medium, design: .monospaced))
                             .foregroundColor(.white.opacity(0.6))
                     }
                 }
                 .padding(.horizontal, 32)
-
-                Spacer(minLength: isCompact ? 8 : 16)
 
                 // Playback controls
                 HStack(spacing: controlSpacing) {
@@ -201,8 +191,6 @@ struct NowPlayingView: View {
                             .foregroundColor(.white)
                     }
                 }
-
-                Spacer(minLength: isCompact ? 8 : 16)
 
                 // Shuffle, thumbs, repeat row
                 HStack {
@@ -247,8 +235,11 @@ struct NowPlayingView: View {
                     }
                 }
                 .padding(.horizontal, 32)
-                .padding(.bottom, 16)
+
+                Spacer(minLength: 0)
             }
+            .padding(.top, 8)
+            .padding(.bottom, 16)
         }
         .preferredColorScheme(.dark)
         .sheet(isPresented: $showQueue) {
