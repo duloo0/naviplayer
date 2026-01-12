@@ -98,7 +98,7 @@ struct NowPlayingView: View {
                                     .frame(width: 44, height: 44)
                             }
                         }
-                        .padding(.horizontal, 8)
+                        .padding(.horizontal, 20)
 
                         // Artwork - centered
                         AsyncArtwork(
@@ -107,6 +107,7 @@ struct NowPlayingView: View {
                             cornerRadius: 12
                         )
                         .frame(width: artworkSize, height: artworkSize)
+                        .frame(maxWidth: .infinity, alignment: .center)
 
                         // Track info - centered
                         VStack(spacing: 4) {
@@ -121,11 +122,13 @@ struct NowPlayingView: View {
                                 .foregroundColor(.white.opacity(0.7))
                                 .lineLimit(1)
                         }
+                        .frame(maxWidth: .infinity, alignment: .center)
                         .padding(.horizontal, 32)
 
                         // Quality badge
                         if let track = viewModel.currentTrack {
                             QualityBadge(track: track, showSpecs: true)
+                                .frame(maxWidth: .infinity, alignment: .center)
                                 .padding(.top, 4)
                         }
 
@@ -156,6 +159,7 @@ struct NowPlayingView: View {
                                     .foregroundColor(.white.opacity(0.6))
                             }
                         }
+                        .frame(maxWidth: .infinity)
                         .padding(.horizontal, 32)
 
                         // Playback controls
@@ -187,6 +191,7 @@ struct NowPlayingView: View {
                                     .foregroundColor(.white)
                             }
                         }
+                        .frame(maxWidth: .infinity, alignment: .center)
 
                         // Shuffle & Repeat
                         HStack {
@@ -231,14 +236,31 @@ struct NowPlayingView: View {
                                     .foregroundColor(viewModel.repeatMode != .off ? Color.Accent.cyan : .white.opacity(0.6))
                             }
                         }
+                        .frame(maxWidth: .infinity)
                         .padding(.horizontal, 32)
                     }
-                    .frame(width: contentWidth, alignment: .center)
+                    .frame(maxWidth: .infinity, alignment: .center)
                     .frame(minHeight: contentHeight, alignment: .center)
                     .padding(.top, safeArea.top + extraTop)
                     .padding(.bottom, safeArea.bottom + extraBottom)
                 }
-                .frame(width: geometry.size.width, height: geometry.size.height)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+#if DEBUG
+                VStack {
+                    Text("NP DEBUG")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Color.red.opacity(0.85))
+                        .cornerRadius(8)
+                    Spacer()
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.top, safeArea.top + 6)
+                .padding(.leading, 12)
+#endif
             }
         }
         .preferredColorScheme(.dark)
