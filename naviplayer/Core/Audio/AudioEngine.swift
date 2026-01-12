@@ -414,7 +414,8 @@ final class AudioEngine: ObservableObject {
             if playerItems[track.id] != nil { continue }
 
             let task = Task { [weak self] in
-                await self?.preloadTrack(track)
+                guard let self = self else { return }
+                await self.preloadTrack(track)
             }
             preloadTasks[track.id] = task
         }
