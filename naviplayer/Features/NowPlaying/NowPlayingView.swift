@@ -243,7 +243,6 @@ struct NowPlayingView: View {
                 .frame(width: geometry.size.width, height: geometry.size.height)
             }
         }
-        .ignoresSafeArea()
         .preferredColorScheme(.dark)
         .sheet(isPresented: $showQueue) {
             QueueView(audioEngine: audioEngine)
