@@ -29,6 +29,11 @@ struct SubsonicResponseBody<T: Codable>: Codable {
 
     var isOk: Bool { status == "ok" }
 
+    // Known keys to exclude when looking for data payload
+    private static var knownKeys: Set<String> {
+        ["status", "version", "type", "serverVersion", "openSubsonic", "error"]
+    }
+
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: DynamicCodingKeys.self)
 
@@ -39,8 +44,16 @@ struct SubsonicResponseBody<T: Codable>: Codable {
         openSubsonic = try container.decodeIfPresent(Bool.self, forKey: DynamicCodingKeys(stringValue: "openSubsonic")!)
         error = try container.decodeIfPresent(SubsonicError.self, forKey: DynamicCodingKeys(stringValue: "error")!)
 
-        // Try to decode the data from any remaining key
-        data = try? T(from: decoder)
+        // Decode data payload - T expects to decode from the same level
+        // Use a new decoder call to let T decode its own keys
+        do {
+            data = try T(from: decoder)
+        } catch {
+            #if DEBUG
+            print("SubsonicResponseBody: Failed to decode data payload (\(T.self)): \(error)")
+            #endif
+            data = nil
+        }
     }
 }
 

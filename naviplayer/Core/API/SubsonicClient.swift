@@ -56,7 +56,8 @@ final class SubsonicClient: ObservableObject {
         self.session = URLSession(configuration: config)
 
         self.decoder = JSONDecoder()
-        self.decoder.keyDecodingStrategy = .convertFromSnakeCase
+        // Note: Navidrome/Subsonic API uses camelCase, not snake_case
+        // Don't use .convertFromSnakeCase as it will break key mapping
 
         // Load saved configuration
         if let saved = ServerConfiguration.load() {
