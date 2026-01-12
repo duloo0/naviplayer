@@ -91,7 +91,7 @@ final class SubsonicClient: ObservableObject {
     // MARK: - Generic Request
     private func request<T: Codable>(
         endpoint: String,
-        parameters: [String: String] = []
+        parameters: [String: String] = [:]
     ) async throws -> T {
         guard let config = configuration else {
             throw SubsonicAPIError.notConfigured
@@ -139,7 +139,7 @@ final class SubsonicClient: ObservableObject {
     private func requestWithIds<T: Codable>(
         endpoint: String,
         ids: [String],
-        parameters: [String: String] = []
+        parameters: [String: String] = [:]
     ) async throws -> T {
         guard let config = configuration else {
             throw SubsonicAPIError.notConfigured
