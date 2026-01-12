@@ -18,98 +18,98 @@ struct NowPlayingView: View {
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        GeometryReader { geometry in
-            ZStack {
-                // Blurred background
-                BlurredArtworkBackground(
-                    url: viewModel.coverArtURL,
-                    blurRadius: 60,
-                    opacity: 0.5
-                )
+        ZStack {
+            // Blurred background
+            BlurredArtworkBackground(
+                url: viewModel.coverArtURL,
+                blurRadius: 60,
+                opacity: 0.5
+            )
 
-                // Gradient overlay
-                GradientOverlay()
+            // Gradient overlay
+            GradientOverlay()
 
-                // Main content
-                ScrollView(showsIndicators: false) {
-                    VStack(spacing: 0) {
-                        // Header with dismiss
-                        headerSection
+            // Main content
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 0) {
+                    // Header with dismiss
+                    headerSection
 
-                        // Artwork
-                        artworkSection(geometry: geometry)
+                    // Artwork - use screen width for sizing
+                    artworkSection
 
-                        // Track info
-                        trackInfoSection
-                            .padding(.top, Spacing.xl)
-
-                        // Quality & metadata
-                        metadataSection
-                            .padding(.top, Spacing.sm)
-
-                        // Progress slider
-                        ProgressSlider(
-                            progress: $viewModel.progress,
-                            duration: viewModel.duration,
-                            onSeek: viewModel.seek
-                        )
+                    // Track info
+                    trackInfoSection
                         .padding(.top, Spacing.xl)
-                        .padding(.horizontal, Spacing.Page.horizontal)
 
-                        // Playback controls
-                        PlaybackControls(
-                            state: viewModel.playbackState,
-                            onPrevious: viewModel.previous,
-                            onPlayPause: viewModel.togglePlayPause,
-                            onNext: viewModel.next
-                        )
-                        .padding(.top, Spacing.lg)
+                    // Quality & metadata
+                    metadataSection
+                        .padding(.top, Spacing.sm)
 
-                        // Shuffle & Repeat
-                        shuffleRepeatSection
+                    // Progress slider
+                    ProgressSlider(
+                        progress: $viewModel.progress,
+                        duration: viewModel.duration,
+                        onSeek: viewModel.seek
+                    )
+                    .padding(.top, Spacing.xl)
+                    .padding(.horizontal, Spacing.Page.horizontal)
+
+                    // Playback controls
+                    PlaybackControls(
+                        state: viewModel.playbackState,
+                        onPrevious: viewModel.previous,
+                        onPlayPause: viewModel.togglePlayPause,
+                        onNext: viewModel.next
+                    )
+                    .padding(.top, Spacing.lg)
+
+                    // Shuffle & Repeat
+                    shuffleRepeatSection
                         .padding(.top, Spacing.lg)
                         .padding(.horizontal, Spacing.xl3)
 
-                        // Actions row
-                        if let track = viewModel.currentTrack {
-                            SecondaryActionsRow(
-                                track: track,
-                                isLoved: viewModel.isLoved,
-                                showLyrics: showLyrics,
-                                onLove: viewModel.toggleLove,
-                                onRate: viewModel.rate,
-                                onToggleLyrics: { withAnimation { showLyrics.toggle() } },
-                                onQueue: { showQueue = true },
-                                onMore: { /* Show more options */ }
-                            )
-                            .padding(.top, Spacing.xl)
-                            .padding(.horizontal, Spacing.Page.horizontal)
-                        }
-
-                        // Signal path (expandable)
-                        if showSignalPath, let track = viewModel.currentTrack {
-                            EnhancedSignalPathView(
-                                track: track,
-                                outputDevice: audioEngine.currentOutputDevice
-                            )
-                            .padding(.top, Spacing.lg)
-                            .padding(.horizontal, Spacing.Page.horizontal)
-                            .transition(.slideFromBottom)
-                        }
-
-                        // Lyrics (expandable)
-                        if showLyrics, let lyrics = viewModel.lyrics {
-                            lyricsSection(lyrics: lyrics)
-                                .padding(.top, Spacing.lg)
-                                .transition(.slideFromBottom)
-                        }
-
-                        // Bottom spacing
-                        Spacer(minLength: Spacing.xl3)
+                    // Actions row
+                    if let track = viewModel.currentTrack {
+                        SecondaryActionsRow(
+                            track: track,
+                            isLoved: viewModel.isLoved,
+                            showLyrics: showLyrics,
+                            onLove: viewModel.toggleLove,
+                            onRate: viewModel.rate,
+                            onToggleLyrics: { withAnimation { showLyrics.toggle() } },
+                            onQueue: { showQueue = true },
+                            onMore: { /* Show more options */ }
+                        )
+                        .padding(.top, Spacing.xl)
+                        .padding(.horizontal, Spacing.Page.horizontal)
                     }
+
+                    // Signal path (expandable)
+                    if showSignalPath, let track = viewModel.currentTrack {
+                        EnhancedSignalPathView(
+                            track: track,
+                            outputDevice: audioEngine.currentOutputDevice
+                        )
+                        .padding(.top, Spacing.lg)
+                        .padding(.horizontal, Spacing.Page.horizontal)
+                        .transition(.slideFromBottom)
+                    }
+
+                    // Lyrics (expandable)
+                    if showLyrics, let lyrics = viewModel.lyrics {
+                        lyricsSection(lyrics: lyrics)
+                            .padding(.top, Spacing.lg)
+                            .transition(.slideFromBottom)
+                    }
+
+                    // Bottom spacing for safe area
+                    Spacer(minLength: 50)
                 }
+                .padding(.bottom, Spacing.xl)
             }
         }
+        .ignoresSafeArea(edges: .top)
         .preferredColorScheme(.dark)
         .sheet(isPresented: $showQueue) {
             QueueView(audioEngine: audioEngine)
@@ -199,8 +199,10 @@ struct NowPlayingView: View {
     }
 
     // MARK: - Artwork Section
-    private func artworkSection(geometry: GeometryProxy) -> some View {
-        let artworkSize = min(geometry.size.width - Spacing.Page.horizontal * 2, 360)
+    private var artworkSection: some View {
+        // Calculate artwork size based on screen width
+        let screenWidth = UIScreen.main.bounds.width
+        let artworkSize = min(screenWidth - Spacing.Page.horizontal * 2, 320)
 
         return AsyncArtwork(
             url: viewModel.coverArtURL,

@@ -96,11 +96,8 @@ struct ContentView: View {
                 }
             }
         }
-        .sheet(isPresented: $showNowPlaying) {
+        .fullScreenCover(isPresented: $showNowPlaying) {
             NowPlayingView()
-                .presentationDetents([.large])
-                .presentationCornerRadius(24)
-                .presentationBackground(.ultraThinMaterial)
         }
     }
 }
