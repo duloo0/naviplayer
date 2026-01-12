@@ -239,6 +239,22 @@ struct NowPlayingView: View {
                     .padding(.bottom, safeArea.bottom + extraBottom)
                 }
                 .frame(width: geometry.size.width, height: geometry.size.height)
+
+#if DEBUG
+                VStack {
+                    Text("NP DEBUG")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Color.red.opacity(0.85))
+                        .cornerRadius(8)
+                    Spacer()
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.top, safeArea.top + 6)
+                .padding(.leading, 12)
+#endif
             }
         }
         .preferredColorScheme(.dark)
