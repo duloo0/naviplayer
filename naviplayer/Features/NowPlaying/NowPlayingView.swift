@@ -21,7 +21,16 @@ struct NowPlayingView: View {
             let extraTop: CGFloat = 8
             let extraBottom: CGFloat = 16
             let contentHeight = max(geometry.size.height - safeArea.top - safeArea.bottom - extraTop - extraBottom, 0)
-            let artworkSize = min(geometry.size.width - 64, min(300, contentHeight * 0.4))
+            let isCompact = contentHeight < 650
+            let artworkMax: CGFloat = isCompact ? 240 : 300
+            let artworkScale: CGFloat = isCompact ? 0.32 : 0.4
+            let artworkSize = min(geometry.size.width - 64, min(artworkMax, contentHeight * artworkScale))
+            let titleSize: CGFloat = isCompact ? 20 : 22
+            let artistSize: CGFloat = isCompact ? 14 : 16
+            let controlSpacing: CGFloat = isCompact ? 32 : 48
+            let controlIconSize: CGFloat = isCompact ? 24 : 28
+            let playPauseSize: CGFloat = isCompact ? 64 : 72
+            let thumbSpacing: CGFloat = isCompact ? 20 : 32
 
             ZStack {
                 // Background color
@@ -48,8 +57,8 @@ struct NowPlayingView: View {
                 .ignoresSafeArea()
 
                 ScrollView(.vertical, showsIndicators: false) {
-                    // Main content - using VStack with explicit frame
-                    VStack(spacing: 0) {
+                    // Main content - uses spacing instead of spacers for reliable scrolling
+                    VStack(spacing: isCompact ? 16 : 24) {
                         // Header
                         HStack {
                             Button {
@@ -90,8 +99,6 @@ struct NowPlayingView: View {
                         }
                         .padding(.horizontal, 8)
 
-                        Spacer(minLength: 16)
-
                         // Artwork - centered
                         AsyncArtwork(
                             url: viewModel.coverArtURL,
@@ -100,18 +107,16 @@ struct NowPlayingView: View {
                         )
                         .frame(width: artworkSize, height: artworkSize)
 
-                        Spacer(minLength: 24)
-
                         // Track info - centered
                         VStack(spacing: 4) {
                             Text(viewModel.currentTrack?.title ?? "Not Playing")
-                                .font(.system(size: 22, weight: .semibold))
+                                .font(.system(size: titleSize, weight: .semibold))
                                 .foregroundColor(.white)
                                 .lineLimit(2)
                                 .multilineTextAlignment(.center)
 
                             Text(viewModel.currentTrack?.effectiveArtist ?? "")
-                                .font(.system(size: 16))
+                                .font(.system(size: artistSize))
                                 .foregroundColor(.white.opacity(0.7))
                                 .lineLimit(1)
                         }
@@ -120,10 +125,8 @@ struct NowPlayingView: View {
                         // Quality badge
                         if let track = viewModel.currentTrack {
                             QualityBadge(track: track, showSpecs: true)
-                                .padding(.top, 8)
+                                .padding(.top, 4)
                         }
-
-                        Spacer(minLength: 24)
 
                         // Progress slider
                         VStack(spacing: 8) {
@@ -154,16 +157,14 @@ struct NowPlayingView: View {
                         }
                         .padding(.horizontal, 32)
 
-                        Spacer(minLength: 16)
-
                         // Playback controls
-                        HStack(spacing: 48) {
+                        HStack(spacing: controlSpacing) {
                             // Previous
                             Button {
                                 viewModel.previous()
                             } label: {
                                 Image(systemName: "backward.fill")
-                                    .font(.system(size: 28))
+                                    .font(.system(size: controlIconSize))
                                     .foregroundColor(.white)
                             }
 
@@ -172,7 +173,7 @@ struct NowPlayingView: View {
                                 viewModel.togglePlayPause()
                             } label: {
                                 Image(systemName: viewModel.playbackState == .playing ? "pause.circle.fill" : "play.circle.fill")
-                                    .font(.system(size: 72))
+                                    .font(.system(size: playPauseSize))
                                     .foregroundColor(.white)
                             }
 
@@ -181,12 +182,10 @@ struct NowPlayingView: View {
                                 viewModel.next()
                             } label: {
                                 Image(systemName: "forward.fill")
-                                    .font(.system(size: 28))
+                                    .font(.system(size: controlIconSize))
                                     .foregroundColor(.white)
                             }
                         }
-
-                        Spacer(minLength: 16)
 
                         // Shuffle & Repeat
                         HStack {
@@ -202,7 +201,7 @@ struct NowPlayingView: View {
 
                             // Thumb buttons
                             if let track = viewModel.currentTrack {
-                                HStack(spacing: 32) {
+                                HStack(spacing: thumbSpacing) {
                                     Button {
                                         Task { await viewModel.rate(track.isThumbDown ? 0 : 1) }
                                     } label: {
@@ -232,11 +231,9 @@ struct NowPlayingView: View {
                             }
                         }
                         .padding(.horizontal, 32)
-
-                        Spacer(minLength: 32)
                     }
                     .frame(maxWidth: .infinity)
-                    .frame(minHeight: max(contentHeight, 0), alignment: .center)
+                    .frame(minHeight: contentHeight, alignment: .center)
                     .padding(.top, safeArea.top + extraTop)
                     .padding(.bottom, safeArea.bottom + extraBottom)
                 }
