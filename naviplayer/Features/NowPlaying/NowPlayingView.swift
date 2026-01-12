@@ -21,6 +21,7 @@ struct NowPlayingView: View {
             let extraTop: CGFloat = 8
             let extraBottom: CGFloat = 16
             let contentHeight = max(geometry.size.height - safeArea.top - safeArea.bottom - extraTop - extraBottom, 0)
+            let contentWidth = geometry.size.width
             let isCompact = contentHeight < 650
             let artworkMax: CGFloat = isCompact ? 240 : 300
             let artworkScale: CGFloat = isCompact ? 0.32 : 0.4
@@ -232,7 +233,7 @@ struct NowPlayingView: View {
                         }
                         .padding(.horizontal, 32)
                     }
-                    .frame(maxWidth: .infinity)
+                    .frame(width: contentWidth, alignment: .center)
                     .frame(minHeight: contentHeight, alignment: .center)
                     .padding(.top, safeArea.top + extraTop)
                     .padding(.bottom, safeArea.bottom + extraBottom)
