@@ -14,6 +14,7 @@ struct NowPlayingView: View {
     @State private var isScrubbing = false
     @State private var scrubPosition: Double = 0
     @State private var showQueue = false
+    @State private var showTrackInfo = false
     @State private var dragOffset: CGFloat = 0
 
     var body: some View {
@@ -47,6 +48,11 @@ struct NowPlayingView: View {
         .animation(.interactiveSpring(), value: dragOffset)
         .sheet(isPresented: $showQueue) {
             QueueView(audioEngine: AudioEngine.shared)
+        }
+        .sheet(isPresented: $showTrackInfo) {
+            if let track = viewModel.currentTrack {
+                TrackDetailsView(track: track)
+            }
         }
         .preferredColorScheme(.dark)
     }
@@ -327,8 +333,8 @@ struct NowPlayingView: View {
     // MARK: - Bottom Info Bar
 
     private func bottomInfoBar(track: Track) -> some View {
-        HStack {
-            // Queue button with count
+        HStack(spacing: 0) {
+            // Queue button with count (left)
             Button {
                 showQueue = true
             } label: {
@@ -341,23 +347,25 @@ struct NowPlayingView: View {
                 .foregroundColor(.white.opacity(0.6))
             }
             .buttonStyle(.plain)
+            .frame(width: 80, alignment: .leading)
 
             Spacer()
 
-            // Audio quality badge
+            // Audio quality badge (center)
             QualityBadge(track: track, showSpecs: false)
 
             Spacer()
 
-            // Info button (placeholder for now)
+            // Info button (right)
             Button {
-                // Could show track details
+                showTrackInfo = true
             } label: {
                 Image(systemName: "info.circle")
                     .font(.system(size: 20))
                     .foregroundColor(.white.opacity(0.6))
             }
             .buttonStyle(.plain)
+            .frame(width: 80, alignment: .trailing)
         }
         .padding(.vertical, 8)
     }
