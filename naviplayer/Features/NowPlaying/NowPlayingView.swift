@@ -2,7 +2,7 @@
 //  NowPlayingView.swift
 //  naviplayer
 //
-//  Premium Now Playing screen with proper layout for all iPhone sizes
+//  Full-screen now playing view based on harmonia-ios pattern
 //
 
 import SwiftUI
@@ -10,83 +10,76 @@ import SwiftUI
 struct NowPlayingView: View {
     @StateObject private var viewModel = NowPlayingViewModel()
     @StateObject private var audioEngine = AudioEngine.shared
-    @State private var showQueue = false
     @Environment(\.dismiss) private var dismiss
 
+    @State private var isScrubbing = false
+    @State private var scrubPosition: Double = 0
+    @State private var showQueue = false
+
     var body: some View {
-        GeometryReader { geo in
-            let screenHeight = geo.size.height
-            let screenWidth = geo.size.width
-            let safeTop = geo.safeAreaInsets.top
-            let safeBottom = geo.safeAreaInsets.bottom
+        NavigationStack {
+            GeometryReader { geometry in
+                ZStack {
+                    // Background
+                    backgroundGradient
+                        .ignoresSafeArea()
 
-            // Calculate sizes based on available space
-            let availableHeight = screenHeight - safeTop - safeBottom
-            let artworkSize = min(screenWidth - 80, availableHeight * 0.38)
-
-            ZStack {
-                // Background layers
-                backgroundLayers
-
-                // Scrollable content
-                ScrollView(.vertical, showsIndicators: false) {
-                    VStack(spacing: 0) {
-                        // Top spacing
-                        Spacer()
-                            .frame(height: safeTop + 8)
-
-                        // Header
-                        headerView
-                            .padding(.horizontal, 20)
-                            .padding(.bottom, 16)
-
-                        // Artwork
-                        artworkView(size: artworkSize)
-                            .padding(.bottom, 20)
-
-                        // Track info
-                        trackInfoView
-                            .padding(.horizontal, 40)
-                            .padding(.bottom, 8)
-
-                        // Quality badge
-                        qualityBadgeView
-                            .padding(.bottom, 20)
-
-                        // Progress slider
-                        progressView
-                            .padding(.horizontal, 32)
-                            .padding(.bottom, 16)
-
-                        // Main playback controls
-                        playbackControlsView
-                            .padding(.bottom, 16)
-
-                        // Secondary controls (shuffle, thumbs, repeat)
-                        secondaryControlsView
-                            .padding(.horizontal, 32)
-
-                        // Bottom spacing
-                        Spacer()
-                            .frame(height: safeBottom + 20)
+                    if let track = viewModel.currentTrack {
+                        VStack(spacing: 0) {
+                            artworkSection(track: track, geometry: geometry)
+                            trackInfoSection(track: track)
+                            Spacer(minLength: 8)
+                            qualitySection(track: track)
+                            Spacer(minLength: 8)
+                            progressSection
+                            controlsSection
+                            ratingSection(track: track)
+                            Spacer(minLength: 8)
+                            bottomControlsBar
+                        }
+                        .padding(.horizontal, 24)
+                        .padding(.bottom, geometry.safeAreaInsets.bottom > 0 ? 8 : 16)
+                    } else {
+                        emptyStateView
                     }
-                    .frame(minHeight: screenHeight)
+                }
+            }
+            .navigationTitle("Now Playing")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        dismiss()
+                    } label: {
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: 16, weight: .semibold))
+                    }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        showQueue = true
+                    } label: {
+                        Image(systemName: "list.bullet")
+                    }
                 }
             }
         }
-        .background(Color.Background.default)
-        .preferredColorScheme(.dark)
+        .onChange(of: viewModel.currentTime) { _, newValue in
+            if !isScrubbing {
+                scrubPosition = newValue
+            }
+        }
         .sheet(isPresented: $showQueue) {
             QueueView(audioEngine: audioEngine)
         }
+        .preferredColorScheme(.dark)
     }
 
     // MARK: - Background
 
-    private var backgroundLayers: some View {
+    private var backgroundGradient: some View {
         ZStack {
             Color.Background.default
-                .ignoresSafeArea()
 
             BlurredArtworkBackground(
                 url: viewModel.coverArtURL,
@@ -103,207 +96,222 @@ struct NowPlayingView: View {
                 startPoint: .top,
                 endPoint: .bottom
             )
-            .ignoresSafeArea()
         }
     }
 
-    // MARK: - Header
+    // MARK: - Artwork Section
 
-    private var headerView: some View {
-        HStack {
-            Button {
-                dismiss()
-            } label: {
-                Image(systemName: "chevron.down")
-                    .font(.system(size: 20, weight: .medium))
-                    .foregroundColor(.white)
-                    .frame(width: 44, height: 44)
-            }
+    @ViewBuilder
+    private func artworkSection(track: Track, geometry: GeometryProxy) -> some View {
+        let maxArtworkSize = min(geometry.size.width - 48, geometry.size.height * 0.38)
+        let artworkSize = max(120, maxArtworkSize)
 
-            Spacer()
-
-            VStack(spacing: 2) {
-                Text("NOW PLAYING")
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundColor(.white.opacity(0.6))
-                    .tracking(1.2)
-
-                if let album = viewModel.currentTrack?.album {
-                    Text(album)
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(.white.opacity(0.8))
-                        .lineLimit(1)
-                }
-            }
-
-            Spacer()
-
-            Button {
-                showQueue = true
-            } label: {
-                Image(systemName: "list.bullet")
-                    .font(.system(size: 18, weight: .medium))
-                    .foregroundColor(.white.opacity(0.8))
-                    .frame(width: 44, height: 44)
-            }
-        }
-    }
-
-    // MARK: - Artwork
-
-    private func artworkView(size: CGFloat) -> some View {
         AsyncArtwork(
             url: viewModel.coverArtURL,
-            size: size,
+            size: artworkSize,
             cornerRadius: 12
         )
-        .frame(width: size, height: size)
-        .shadow(color: .black.opacity(0.4), radius: 24, x: 0, y: 12)
+        .frame(width: artworkSize, height: artworkSize)
+        .shadow(color: .black.opacity(0.3), radius: 16, y: 8)
+        .padding(.top, 8)
+        .padding(.bottom, 16)
     }
 
-    // MARK: - Track Info
+    // MARK: - Track Info Section
 
-    private var trackInfoView: some View {
-        VStack(spacing: 6) {
-            Text(viewModel.currentTrack?.title ?? "Not Playing")
-                .font(.system(size: 22, weight: .bold))
+    @ViewBuilder
+    private func trackInfoSection(track: Track) -> some View {
+        VStack(spacing: 4) {
+            Text(track.title)
+                .font(.title3)
+                .fontWeight(.bold)
                 .foregroundColor(.white)
                 .lineLimit(2)
                 .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
 
-            Text(viewModel.currentTrack?.effectiveArtist ?? "")
-                .font(.system(size: 16, weight: .medium))
+            Text(track.effectiveArtist)
+                .font(.subheadline)
                 .foregroundColor(.white.opacity(0.7))
                 .lineLimit(1)
-        }
-    }
 
-    // MARK: - Quality Badge
-
-    private var qualityBadgeView: some View {
-        Group {
-            if let track = viewModel.currentTrack {
-                QualityBadge(track: track, showSpecs: true)
+            if let album = track.album {
+                Text(album)
+                    .font(.caption)
+                    .foregroundColor(.white.opacity(0.5))
+                    .lineLimit(1)
             }
         }
     }
 
-    // MARK: - Progress
+    // MARK: - Quality Section
 
-    private var progressView: some View {
-        VStack(spacing: 8) {
+    @ViewBuilder
+    private func qualitySection(track: Track) -> some View {
+        QualityBadge(track: track, showSpecs: true)
+            .padding(.vertical, 4)
+    }
+
+    // MARK: - Progress Section
+
+    private var progressSection: some View {
+        VStack(spacing: 4) {
             Slider(
                 value: Binding(
-                    get: { viewModel.progress },
-                    set: { viewModel.seek(to: $0 * viewModel.duration) }
+                    get: { isScrubbing ? scrubPosition : viewModel.currentTime },
+                    set: { newValue in
+                        scrubPosition = newValue
+                        if isScrubbing {
+                            viewModel.seek(to: scrubPosition)
+                        }
+                    }
                 ),
-                in: 0...1
+                in: 0...max(safeDuration, 1),
+                onEditingChanged: { editing in
+                    if editing {
+                        isScrubbing = true
+                        scrubPosition = viewModel.currentTime
+                    } else {
+                        isScrubbing = false
+                        viewModel.seek(to: scrubPosition)
+                    }
+                }
             )
             .tint(.white)
+            .disabled(viewModel.duration <= 0.5)
 
             HStack {
-                Text(formatTime(viewModel.currentTime))
-                    .font(.system(size: 12, weight: .medium, design: .monospaced))
+                Text(formatTime(isScrubbing ? scrubPosition : viewModel.currentTime))
+                    .font(.caption2)
                     .foregroundColor(.white.opacity(0.6))
-
+                    .monospacedDigit()
                 Spacer()
-
-                Text(formatTime(viewModel.duration))
-                    .font(.system(size: 12, weight: .medium, design: .monospaced))
+                Text("-\(formatTime(max(0, safeDuration - (isScrubbing ? scrubPosition : viewModel.currentTime))))")
+                    .font(.caption2)
                     .foregroundColor(.white.opacity(0.6))
+                    .monospacedDigit()
             }
         }
+        .padding(.bottom, 8)
     }
 
-    // MARK: - Playback Controls
+    // MARK: - Controls Section
 
-    private var playbackControlsView: some View {
-        HStack(spacing: 44) {
+    private var controlsSection: some View {
+        HStack(spacing: 36) {
             Button {
                 viewModel.previous()
             } label: {
                 Image(systemName: "backward.fill")
-                    .font(.system(size: 28))
+                    .font(.system(size: 26))
                     .foregroundColor(.white)
             }
+            .buttonStyle(.plain)
 
             Button {
                 viewModel.togglePlayPause()
             } label: {
                 Image(systemName: viewModel.playbackState == .playing ? "pause.circle.fill" : "play.circle.fill")
-                    .font(.system(size: 72))
+                    .font(.system(size: 64))
                     .foregroundColor(.white)
             }
+            .buttonStyle(.plain)
 
             Button {
                 viewModel.next()
             } label: {
                 Image(systemName: "forward.fill")
-                    .font(.system(size: 28))
+                    .font(.system(size: 26))
                     .foregroundColor(.white)
             }
+            .buttonStyle(.plain)
         }
+        .padding(.vertical, 8)
     }
 
-    // MARK: - Secondary Controls
+    // MARK: - Rating Section
 
-    private var secondaryControlsView: some View {
+    @ViewBuilder
+    private func ratingSection(track: Track) -> some View {
+        HStack(spacing: 48) {
+            Button {
+                Task { await viewModel.rate(track.isThumbDown ? 0 : 1) }
+            } label: {
+                Image(systemName: track.isThumbDown ? "hand.thumbsdown.fill" : "hand.thumbsdown")
+                    .font(.system(size: 28))
+                    .foregroundColor(track.isThumbDown ? .red : .white.opacity(0.6))
+            }
+            .buttonStyle(.plain)
+
+            Button {
+                Task { await viewModel.rate(track.isThumbUp ? 0 : 5) }
+            } label: {
+                Image(systemName: track.isThumbUp ? "hand.thumbsup.fill" : "hand.thumbsup")
+                    .font(.system(size: 28))
+                    .foregroundColor(track.isThumbUp ? .green : .white.opacity(0.6))
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.vertical, 8)
+    }
+
+    // MARK: - Bottom Controls Bar
+
+    private var bottomControlsBar: some View {
         HStack {
-            // Shuffle
             Button {
                 viewModel.toggleShuffle()
             } label: {
-                Image(systemName: "shuffle")
-                    .font(.system(size: 18, weight: .medium))
+                Image(systemName: viewModel.shuffleEnabled ? "shuffle.circle.fill" : "shuffle")
+                    .font(.title2)
                     .foregroundColor(viewModel.shuffleEnabled ? Color.Accent.cyan : .white.opacity(0.5))
             }
-            .frame(width: 44, height: 44)
+            .buttonStyle(.plain)
 
             Spacer()
 
-            // Thumbs
-            if let track = viewModel.currentTrack {
-                HStack(spacing: 32) {
-                    Button {
-                        Task { await viewModel.rate(track.isThumbDown ? 0 : 1) }
-                    } label: {
-                        Image(systemName: track.isThumbDown ? "hand.thumbsdown.fill" : "hand.thumbsdown")
-                            .font(.system(size: 22))
-                            .foregroundColor(track.isThumbDown ? .red : .white.opacity(0.5))
-                    }
-
-                    Button {
-                        Task { await viewModel.rate(track.isThumbUp ? 0 : 5) }
-                    } label: {
-                        Image(systemName: track.isThumbUp ? "hand.thumbsup.fill" : "hand.thumbsup")
-                            .font(.system(size: 22))
-                            .foregroundColor(track.isThumbUp ? .green : .white.opacity(0.5))
-                    }
-                }
-            }
-
-            Spacer()
-
-            // Repeat
             Button {
                 viewModel.cycleRepeatMode()
             } label: {
                 Image(systemName: viewModel.repeatMode == .one ? "repeat.1" : "repeat")
-                    .font(.system(size: 18, weight: .medium))
+                    .font(.title2)
                     .foregroundColor(viewModel.repeatMode != .off ? Color.Accent.cyan : .white.opacity(0.5))
             }
-            .frame(width: 44, height: 44)
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 8)
+    }
+
+    // MARK: - Empty State
+
+    private var emptyStateView: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "music.note")
+                .font(.system(size: 64))
+                .foregroundColor(.white.opacity(0.5))
+            Text("Nothing is playing")
+                .font(.title2)
+                .fontWeight(.semibold)
+                .foregroundColor(.white)
+            Text("Start playback from the library")
+                .font(.subheadline)
+                .foregroundColor(.white.opacity(0.6))
         }
     }
 
     // MARK: - Helpers
 
+    private var safeDuration: TimeInterval {
+        let d = viewModel.duration
+        guard d.isFinite && d > 0 else { return 1 }
+        return d
+    }
+
     private func formatTime(_ seconds: TimeInterval) -> String {
-        guard seconds.isFinite && seconds >= 0 else { return "0:00" }
-        let mins = Int(seconds) / 60
-        let secs = Int(seconds) % 60
-        return String(format: "%d:%02d", mins, secs)
+        guard seconds.isFinite, seconds >= 0 else { return "--:--" }
+        let total = Int(seconds.rounded())
+        let minutes = total / 60
+        let remaining = total % 60
+        return String(format: "%d:%02d", minutes, remaining)
     }
 }
 
