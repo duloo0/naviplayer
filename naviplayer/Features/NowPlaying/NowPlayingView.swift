@@ -233,22 +233,25 @@ struct NowPlayingView: View {
     // MARK: - Rating
 
     private func ratingView(track: Track) -> some View {
-        HStack(spacing: 48) {
+        let isThumbDown = viewModel.currentRating == 1
+        let isThumbUp = viewModel.currentRating == 5
+
+        return HStack(spacing: 48) {
             Button {
-                Task { await viewModel.rate(track.isThumbDown ? 0 : 1) }
+                Task { await viewModel.rate(isThumbDown ? 0 : 1) }
             } label: {
-                Image(systemName: track.isThumbDown ? "hand.thumbsdown.fill" : "hand.thumbsdown")
+                Image(systemName: isThumbDown ? "hand.thumbsdown.fill" : "hand.thumbsdown")
                     .font(.system(size: 24))
-                    .foregroundColor(track.isThumbDown ? .red : .white.opacity(0.6))
+                    .foregroundColor(isThumbDown ? .red : .white.opacity(0.6))
             }
             .buttonStyle(.plain)
 
             Button {
-                Task { await viewModel.rate(track.isThumbUp ? 0 : 5) }
+                Task { await viewModel.rate(isThumbUp ? 0 : 5) }
             } label: {
-                Image(systemName: track.isThumbUp ? "hand.thumbsup.fill" : "hand.thumbsup")
+                Image(systemName: isThumbUp ? "hand.thumbsup.fill" : "hand.thumbsup")
                     .font(.system(size: 24))
-                    .foregroundColor(track.isThumbUp ? .green : .white.opacity(0.6))
+                    .foregroundColor(isThumbUp ? .green : .white.opacity(0.6))
             }
             .buttonStyle(.plain)
         }

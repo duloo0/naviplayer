@@ -24,6 +24,9 @@ final class NowPlayingViewModel: ObservableObject {
     @Published var shuffleEnabled: Bool = false
     @Published var repeatMode: AudioEngine.RepeatMode = .off
 
+    // Rating state (local)
+    @Published var currentRating: Int = 0
+
     // Color extraction
     @Published var dominantColor: Color = Color.Accent.cyan
     @Published var secondaryColor: Color = Color.Background.elevated
@@ -66,6 +69,7 @@ final class NowPlayingViewModel: ObservableObject {
             .sink { [weak self] track in
                 self?.currentTrack = track
                 self?.isLoved = track?.isStarred ?? false
+                self?.currentRating = track?.userRating ?? 0
                 // Load lyrics and extract colors when track changes
                 if track != nil {
                     Task { [weak self] in
@@ -157,6 +161,10 @@ final class NowPlayingViewModel: ObservableObject {
 
         do {
             try await client.setRating(id: track.id, rating: rating)
+            // Update local state on success
+            await MainActor.run {
+                currentRating = rating
+            }
         } catch {
             print("Failed to rate: \(error)")
         }

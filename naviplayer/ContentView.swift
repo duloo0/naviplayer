@@ -38,66 +38,76 @@ struct ContentView: View {
 
     // MARK: - Main Tab View
     private var mainTabView: some View {
-        ZStack(alignment: .bottom) {
-            TabView(selection: $selectedTab) {
-                // Library Tab
-                NavigationStack {
-                    LibraryView()
-                }
-                .tabItem {
-                    Label("Library", systemImage: "music.note.house")
-                }
-                .tag(Tab.library)
-
-                // Playlists Tab
-                NavigationStack {
-                    PlaylistsView()
-                }
-                .tabItem {
-                    Label("Playlists", systemImage: "music.note.list")
-                }
-                .tag(Tab.playlists)
-
-                // Radio Tab
-                NavigationStack {
-                    RadioMenuView()
-                }
-                .tabItem {
-                    Label("Radio", systemImage: "radio")
-                }
-                .tag(Tab.radio)
-
-                // Search Tab
-                NavigationStack {
-                    SearchView()
-                }
-                .tabItem {
-                    Label("Search", systemImage: "magnifyingglass")
-                }
-                .tag(Tab.search)
-
-                // Settings Tab
-                NavigationStack {
-                    SettingsView()
-                }
-                .tabItem {
-                    Label("Settings", systemImage: "gearshape")
-                }
-                .tag(Tab.settings)
+        TabView(selection: $selectedTab) {
+            // Library Tab
+            NavigationStack {
+                LibraryView()
             }
-            .tint(Color.Accent.cyan)
-            .safeAreaInset(edge: .bottom, spacing: 0) {
-                // Mini Player (above tab bar)
-                // Hidden when: full player sheet is showing, or on Radio tab (which has its own player UI)
-                if audioEngine.currentTrack != nil && !showNowPlaying && selectedTab != .radio {
-                    MiniPlayer(audioEngine: audioEngine) {
-                        showNowPlaying = true
-                    }
-                }
+            .safeAreaInset(edge: .bottom) {
+                miniPlayerIfNeeded
             }
+            .tabItem {
+                Label("Library", systemImage: "music.note.house")
+            }
+            .tag(Tab.library)
+
+            // Playlists Tab
+            NavigationStack {
+                PlaylistsView()
+            }
+            .safeAreaInset(edge: .bottom) {
+                miniPlayerIfNeeded
+            }
+            .tabItem {
+                Label("Playlists", systemImage: "music.note.list")
+            }
+            .tag(Tab.playlists)
+
+            // Radio Tab
+            NavigationStack {
+                RadioMenuView()
+            }
+            .tabItem {
+                Label("Radio", systemImage: "radio")
+            }
+            .tag(Tab.radio)
+
+            // Search Tab
+            NavigationStack {
+                SearchView()
+            }
+            .safeAreaInset(edge: .bottom) {
+                miniPlayerIfNeeded
+            }
+            .tabItem {
+                Label("Search", systemImage: "magnifyingglass")
+            }
+            .tag(Tab.search)
+
+            // Settings Tab
+            NavigationStack {
+                SettingsView()
+            }
+            .safeAreaInset(edge: .bottom) {
+                miniPlayerIfNeeded
+            }
+            .tabItem {
+                Label("Settings", systemImage: "gearshape")
+            }
+            .tag(Tab.settings)
         }
+        .tint(Color.Accent.cyan)
         .fullScreenCover(isPresented: $showNowPlaying) {
             NowPlayingView()
+        }
+    }
+
+    @ViewBuilder
+    private var miniPlayerIfNeeded: some View {
+        if audioEngine.currentTrack != nil && !showNowPlaying {
+            MiniPlayer(audioEngine: audioEngine) {
+                showNowPlaying = true
+            }
         }
     }
 }
