@@ -13,69 +13,77 @@ struct RadioMenuView: View {
             Color.Background.default
                 .ignoresSafeArea()
 
-            ScrollView {
-                VStack(spacing: Spacing.lg) {
-                    // Header
-                    VStack(spacing: Spacing.sm) {
-                        Image(systemName: "radio")
-                            .font(.system(size: 48))
-                            .foregroundColor(Color.Accent.cyan)
-                            .padding(.top, Spacing.xl2)
+            VStack(spacing: 0) {
+                // Compact header row
+                HStack {
+                    Text("Radio")
+                        .font(.system(size: 28, weight: .bold))
+                        .foregroundColor(.white)
 
-                        Text("Radio")
-                            .font(.Navi.headlineMedium)
-                            .foregroundColor(Color.Text.primary)
+                    Spacer()
+                }
+                .padding(.horizontal, Spacing.Page.horizontal)
+                .padding(.top, 12)
+                .padding(.bottom, 8)
 
-                        Text("Smart radio stations based on your library")
-                            .font(.Navi.bodyMedium)
-                            .foregroundColor(Color.Text.secondary)
-                            .multilineTextAlignment(.center)
-                    }
-                    .padding(.horizontal, Spacing.Page.horizontal)
-                    .padding(.bottom, Spacing.lg)
+                ScrollView {
+                    VStack(spacing: Spacing.lg) {
+                        // Decorative header
+                        VStack(spacing: Spacing.sm) {
+                            Image(systemName: "radio")
+                                .font(.system(size: 40))
+                                .foregroundColor(Color.Accent.cyan)
 
-                    // Radio Options
-                    VStack(spacing: Spacing.md) {
-                        // Library Radio
-                        NavigationLink {
-                            LibraryRadioView()
-                        } label: {
+                            Text("Smart radio stations based on your library")
+                                .font(.Navi.bodyMedium)
+                                .foregroundColor(Color.Text.secondary)
+                                .multilineTextAlignment(.center)
+                        }
+                        .padding(.horizontal, Spacing.Page.horizontal)
+                        .padding(.vertical, Spacing.md)
+
+                        // Radio Options
+                        VStack(spacing: Spacing.md) {
+                            // Library Radio
+                            NavigationLink {
+                                LibraryRadioView()
+                            } label: {
+                                RadioOptionCard(
+                                    icon: "waveform.path",
+                                    title: "Library Radio",
+                                    description: "Smart mix weighted by popularity, your ratings, and play history",
+                                    accentColor: Color.Accent.cyan
+                                )
+                            }
+                            .buttonStyle(.plain)
+
+                            // More radio options can be added here in the future
+                            // For example: Genre Radio, Artist Radio, Decade Radio, etc.
+
                             RadioOptionCard(
-                                icon: "waveform.path",
-                                title: "Library Radio",
-                                description: "Smart mix weighted by popularity, your ratings, and play history",
-                                accentColor: Color.Accent.cyan
+                                icon: "music.note.list",
+                                title: "Genre Radio",
+                                description: "Coming soon - Radio based on your favorite genres",
+                                accentColor: Color.Text.tertiary,
+                                isDisabled: true
+                            )
+
+                            RadioOptionCard(
+                                icon: "person.2",
+                                title: "Artist Radio",
+                                description: "Coming soon - Radio based on similar artists",
+                                accentColor: Color.Text.tertiary,
+                                isDisabled: true
                             )
                         }
-                        .buttonStyle(.plain)
+                        .padding(.horizontal, Spacing.Page.horizontal)
 
-                        // More radio options can be added here in the future
-                        // For example: Genre Radio, Artist Radio, Decade Radio, etc.
-
-                        RadioOptionCard(
-                            icon: "music.note.list",
-                            title: "Genre Radio",
-                            description: "Coming soon - Radio based on your favorite genres",
-                            accentColor: Color.Text.tertiary,
-                            isDisabled: true
-                        )
-
-                        RadioOptionCard(
-                            icon: "person.2",
-                            title: "Artist Radio",
-                            description: "Coming soon - Radio based on similar artists",
-                            accentColor: Color.Text.tertiary,
-                            isDisabled: true
-                        )
+                        Spacer(minLength: Spacing.xl3 + 80) // Space for mini player
                     }
-                    .padding(.horizontal, Spacing.Page.horizontal)
-
-                    Spacer(minLength: Spacing.xl3 + 80) // Space for mini player
                 }
             }
         }
-        .navigationTitle("Radio")
-        .navigationBarTitleDisplayMode(.large)
+        .navigationBarHidden(true)
     }
 }
 

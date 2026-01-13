@@ -17,40 +17,54 @@ struct PlaylistsView: View {
             Color.Background.default
                 .ignoresSafeArea()
 
-            if viewModel.isLoading && viewModel.playlists.isEmpty {
-                ProgressView()
-                    .progressViewStyle(CircularProgressViewStyle(tint: Color.Accent.cyan))
-            } else if viewModel.playlists.isEmpty {
-                emptyState
-            } else {
-                ScrollView(showsIndicators: false) {
-                    LazyVStack(alignment: .leading, spacing: 0) {
-                        // Smart playlists section
-                        if !viewModel.smartPlaylists.isEmpty {
-                            playlistSection(
-                                title: "SMART PLAYLISTS",
-                                icon: "sparkles",
-                                playlists: viewModel.smartPlaylists
-                            )
-                        }
+            VStack(spacing: 0) {
+                // Compact header row
+                HStack {
+                    Text("Playlists")
+                        .font(.system(size: 28, weight: .bold))
+                        .foregroundColor(.white)
 
-                        // Regular playlists section
-                        if !viewModel.regularPlaylists.isEmpty {
-                            playlistSection(
-                                title: "PLAYLISTS",
-                                icon: "music.note.list",
-                                playlists: viewModel.regularPlaylists
-                            )
-                        }
+                    Spacer()
+                }
+                .padding(.horizontal, Spacing.Page.horizontal)
+                .padding(.top, 12)
+                .padding(.bottom, 8)
 
-                        Spacer(minLength: Spacing.xl3 + 80) // Extra space for mini player
+                if viewModel.isLoading && viewModel.playlists.isEmpty {
+                    Spacer()
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: Color.Accent.cyan))
+                    Spacer()
+                } else if viewModel.playlists.isEmpty {
+                    emptyState
+                } else {
+                    ScrollView(showsIndicators: false) {
+                        LazyVStack(alignment: .leading, spacing: 0) {
+                            // Smart playlists section
+                            if !viewModel.smartPlaylists.isEmpty {
+                                playlistSection(
+                                    title: "SMART PLAYLISTS",
+                                    icon: "sparkles",
+                                    playlists: viewModel.smartPlaylists
+                                )
+                            }
+
+                            // Regular playlists section
+                            if !viewModel.regularPlaylists.isEmpty {
+                                playlistSection(
+                                    title: "PLAYLISTS",
+                                    icon: "music.note.list",
+                                    playlists: viewModel.regularPlaylists
+                                )
+                            }
+
+                            Spacer(minLength: Spacing.xl3 + 80) // Extra space for mini player
+                        }
                     }
-                    .padding(.top, Spacing.md)
                 }
             }
         }
-        .navigationTitle("Playlists")
-        .navigationBarTitleDisplayMode(.large)
+        .navigationBarHidden(true)
         .task {
             await viewModel.load()
         }

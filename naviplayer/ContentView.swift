@@ -103,6 +103,44 @@ struct LibraryView: View {
                 .ignoresSafeArea()
 
             VStack(spacing: 0) {
+                // Compact header row
+                HStack {
+                    Text("Library")
+                        .font(.system(size: 28, weight: .bold))
+                        .foregroundColor(.white)
+
+                    Spacer()
+
+                    // Sort button (only for albums)
+                    if selectedSection == .albums {
+                        Menu {
+                            ForEach([AlbumListType.newest, .recent, .frequent, .random, .alphabeticalByName], id: \.self) { type in
+                                Button {
+                                    albumSortType = type
+                                    Task { await loadAlbums() }
+                                } label: {
+                                    HStack {
+                                        Text(sortTypeName(type))
+                                        if albumSortType == type {
+                                            Image(systemName: "checkmark")
+                                        }
+                                    }
+                                }
+                            }
+                        } label: {
+                            Image(systemName: "arrow.up.arrow.down")
+                                .font(.system(size: 20))
+                                .foregroundColor(Color.Accent.cyan)
+                                .frame(width: 44, height: 44)
+                                .background(Color.Background.elevated)
+                                .clipShape(Circle())
+                        }
+                    }
+                }
+                .padding(.horizontal, Spacing.Page.horizontal)
+                .padding(.top, 12)
+                .padding(.bottom, 8)
+
                 // Segment picker
                 Picker("Section", selection: $selectedSection) {
                     ForEach(LibrarySection.allCases, id: \.self) { section in
@@ -111,7 +149,7 @@ struct LibraryView: View {
                 }
                 .pickerStyle(.segmented)
                 .padding(.horizontal, Spacing.Page.horizontal)
-                .padding(.vertical, Spacing.sm)
+                .padding(.bottom, Spacing.sm)
 
                 if isLoading {
                     Spacer()
@@ -128,31 +166,7 @@ struct LibraryView: View {
                 }
             }
         }
-        .navigationTitle("Library")
-        .toolbar {
-            if selectedSection == .albums {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Menu {
-                        ForEach([AlbumListType.newest, .recent, .frequent, .random, .alphabeticalByName], id: \.self) { type in
-                            Button {
-                                albumSortType = type
-                                Task { await loadAlbums() }
-                            } label: {
-                                HStack {
-                                    Text(sortTypeName(type))
-                                    if albumSortType == type {
-                                        Image(systemName: "checkmark")
-                                    }
-                                }
-                            }
-                        }
-                    } label: {
-                        Image(systemName: "arrow.up.arrow.down")
-                            .foregroundColor(Color.Accent.cyan)
-                    }
-                }
-            }
-        }
+        .navigationBarHidden(true)
         .task {
             await loadData()
         }
@@ -365,7 +379,19 @@ struct SearchView: View {
             Color.Background.default
                 .ignoresSafeArea()
 
-            VStack {
+            VStack(spacing: 0) {
+                // Compact header row
+                HStack {
+                    Text("Search")
+                        .font(.system(size: 28, weight: .bold))
+                        .foregroundColor(.white)
+
+                    Spacer()
+                }
+                .padding(.horizontal, Spacing.Page.horizontal)
+                .padding(.top, 12)
+                .padding(.bottom, 12)
+
                 // Search bar
                 HStack {
                     Image(systemName: "magnifyingglass")
@@ -414,7 +440,7 @@ struct SearchView: View {
                 }
             }
         }
-        .navigationTitle("Search")
+        .navigationBarHidden(true)
     }
 
     private func searchResults(_ result: SearchResult) -> some View {
@@ -635,34 +661,48 @@ struct SettingsView: View {
             Color.Background.default
                 .ignoresSafeArea()
 
-            List {
-                Section {
-                    HStack {
-                        Text("Server")
-                        Spacer()
-                        Text(SubsonicClient.shared.configuration?.url.host ?? "Not connected")
-                            .foregroundColor(Color.Text.secondary)
+            VStack(spacing: 0) {
+                // Compact header row
+                HStack {
+                    Text("Settings")
+                        .font(.system(size: 28, weight: .bold))
+                        .foregroundColor(.white)
+
+                    Spacer()
+                }
+                .padding(.horizontal, Spacing.Page.horizontal)
+                .padding(.top, 12)
+                .padding(.bottom, 8)
+
+                List {
+                    Section {
+                        HStack {
+                            Text("Server")
+                            Spacer()
+                            Text(SubsonicClient.shared.configuration?.url.host ?? "Not connected")
+                                .foregroundColor(Color.Text.secondary)
+                        }
+
+                        HStack {
+                            Text("Username")
+                            Spacer()
+                            Text(SubsonicClient.shared.configuration?.username ?? "")
+                                .foregroundColor(Color.Text.secondary)
+                        }
+                    } header: {
+                        Text("Connection")
                     }
 
-                    HStack {
-                        Text("Username")
-                        Spacer()
-                        Text(SubsonicClient.shared.configuration?.username ?? "")
-                            .foregroundColor(Color.Text.secondary)
-                    }
-                } header: {
-                    Text("Connection")
-                }
-
-                Section {
-                    Button("Disconnect", role: .destructive) {
-                        SubsonicClient.shared.disconnect()
+                    Section {
+                        Button("Disconnect", role: .destructive) {
+                            SubsonicClient.shared.disconnect()
+                        }
                     }
                 }
+                .scrollContentBackground(.hidden)
             }
-            .scrollContentBackground(.hidden)
         }
-        .navigationTitle("Settings")
+        .navigationBarHidden(true)
     }
 }
 
