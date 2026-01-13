@@ -24,25 +24,21 @@ struct NowPlayingView: View {
                     .ignoresSafeArea()
 
                 if let track = viewModel.currentTrack {
-                    ScrollView(showsIndicators: false) {
-                        VStack(spacing: 0) {
-                            artworkSection(track: track)
-                            trackInfoSection(track: track)
-                            Spacer().frame(height: 12)
-                            qualitySection(track: track)
-                            Spacer().frame(height: 12)
-                            progressSection
-                            Spacer().frame(height: 8)
-                            controlsSection
-                            Spacer().frame(height: 8)
-                            ratingSection(track: track)
-                            Spacer().frame(height: 16)
-                            bottomControlsBar
-                            Spacer().frame(height: 20)
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding(.horizontal, 24)
+                    VStack(spacing: 0) {
+                        artworkSection(track: track)
+                        trackInfoSection(track: track)
+                        Spacer().frame(height: 8)
+                        qualitySection(track: track)
+                        Spacer().frame(height: 4)
+                        progressSection
+                        controlsSection
+                        ratingSection(track: track)
+                        Spacer()
+                        bottomControlsBar
                     }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 24)
                 } else {
                     emptyStateView
                 }
@@ -106,7 +102,7 @@ struct NowPlayingView: View {
 
     @ViewBuilder
     private func artworkSection(track: Track) -> some View {
-        let artworkSize: CGFloat = 280
+        let artworkSize: CGFloat = 260
 
         AsyncArtwork(
             url: viewModel.coverArtURL,
@@ -116,8 +112,8 @@ struct NowPlayingView: View {
         .frame(width: artworkSize, height: artworkSize)
         .shadow(color: .black.opacity(0.3), radius: 16, y: 8)
         .frame(maxWidth: .infinity, alignment: .center)
-        .padding(.top, 16)
-        .padding(.bottom, 20)
+        .padding(.top, 8)
+        .padding(.bottom, 12)
     }
 
     // MARK: - Track Info Section
@@ -158,7 +154,7 @@ struct NowPlayingView: View {
     // MARK: - Progress Section
 
     private var progressSection: some View {
-        VStack(spacing: 4) {
+        VStack(spacing: 8) {
             Slider(
                 value: Binding(
                     get: { isScrubbing ? scrubPosition : viewModel.currentTime },
@@ -181,21 +177,23 @@ struct NowPlayingView: View {
                 }
             )
             .tint(.white)
+            .accentColor(.white)
             .disabled(viewModel.duration <= 0.5)
 
             HStack {
                 Text(formatTime(isScrubbing ? scrubPosition : viewModel.currentTime))
-                    .font(.caption2)
-                    .foregroundColor(.white.opacity(0.6))
+                    .font(.caption)
+                    .foregroundColor(.white.opacity(0.8))
                     .monospacedDigit()
                 Spacer()
                 Text("-\(formatTime(max(0, safeDuration - (isScrubbing ? scrubPosition : viewModel.currentTime))))")
-                    .font(.caption2)
-                    .foregroundColor(.white.opacity(0.6))
+                    .font(.caption)
+                    .foregroundColor(.white.opacity(0.8))
                     .monospacedDigit()
             }
         }
         .frame(maxWidth: .infinity)
+        .padding(.vertical, 8)
     }
 
     // MARK: - Controls Section
@@ -206,7 +204,7 @@ struct NowPlayingView: View {
                 viewModel.previous()
             } label: {
                 Image(systemName: "backward.fill")
-                    .font(.system(size: 26))
+                    .font(.system(size: 28))
                     .foregroundColor(.white)
             }
             .buttonStyle(.plain)
@@ -215,7 +213,7 @@ struct NowPlayingView: View {
                 viewModel.togglePlayPause()
             } label: {
                 Image(systemName: viewModel.playbackState == .playing ? "pause.circle.fill" : "play.circle.fill")
-                    .font(.system(size: 64))
+                    .font(.system(size: 60))
                     .foregroundColor(.white)
             }
             .buttonStyle(.plain)
@@ -224,11 +222,12 @@ struct NowPlayingView: View {
                 viewModel.next()
             } label: {
                 Image(systemName: "forward.fill")
-                    .font(.system(size: 26))
+                    .font(.system(size: 28))
                     .foregroundColor(.white)
             }
             .buttonStyle(.plain)
         }
+        .padding(.vertical, 4)
         .frame(maxWidth: .infinity, alignment: .center)
     }
 
@@ -241,7 +240,7 @@ struct NowPlayingView: View {
                 Task { await viewModel.rate(track.isThumbDown ? 0 : 1) }
             } label: {
                 Image(systemName: track.isThumbDown ? "hand.thumbsdown.fill" : "hand.thumbsdown")
-                    .font(.system(size: 28))
+                    .font(.system(size: 24))
                     .foregroundColor(track.isThumbDown ? .red : .white.opacity(0.6))
             }
             .buttonStyle(.plain)
@@ -250,11 +249,12 @@ struct NowPlayingView: View {
                 Task { await viewModel.rate(track.isThumbUp ? 0 : 5) }
             } label: {
                 Image(systemName: track.isThumbUp ? "hand.thumbsup.fill" : "hand.thumbsup")
-                    .font(.system(size: 28))
+                    .font(.system(size: 24))
                     .foregroundColor(track.isThumbUp ? .green : .white.opacity(0.6))
             }
             .buttonStyle(.plain)
         }
+        .padding(.top, 4)
         .frame(maxWidth: .infinity, alignment: .center)
     }
 
@@ -266,8 +266,8 @@ struct NowPlayingView: View {
                 viewModel.toggleShuffle()
             } label: {
                 Image(systemName: viewModel.shuffleEnabled ? "shuffle.circle.fill" : "shuffle")
-                    .font(.title2)
-                    .foregroundColor(viewModel.shuffleEnabled ? Color.Accent.cyan : .white.opacity(0.5))
+                    .font(.system(size: 22))
+                    .foregroundColor(viewModel.shuffleEnabled ? Color.Accent.cyan : .white.opacity(0.6))
             }
             .buttonStyle(.plain)
 
@@ -277,11 +277,12 @@ struct NowPlayingView: View {
                 viewModel.cycleRepeatMode()
             } label: {
                 Image(systemName: viewModel.repeatMode == .one ? "repeat.1" : "repeat")
-                    .font(.title2)
-                    .foregroundColor(viewModel.repeatMode != .off ? Color.Accent.cyan : .white.opacity(0.5))
+                    .font(.system(size: 22))
+                    .foregroundColor(viewModel.repeatMode != .off ? Color.Accent.cyan : .white.opacity(0.6))
             }
             .buttonStyle(.plain)
         }
+        .padding(.vertical, 8)
         .frame(maxWidth: .infinity)
     }
 
