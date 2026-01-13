@@ -34,25 +34,22 @@ struct CachedAsyncImage: View {
     @State private var isLoading = false
 
     var body: some View {
-        Group {
+        ZStack {
+            Color.Background.elevated
+
             if let image = image {
                 Image(uiImage: image)
                     .resizable()
             } else {
-                Color.Background.elevated
-                    .overlay(
-                        Group {
-                            if isLoading {
-                                ProgressView()
-                                    .progressViewStyle(CircularProgressViewStyle(tint: Color.Text.tertiary))
-                                    .scaleEffect(0.8)
-                            } else {
-                                Image(systemName: "music.note")
-                                    .font(.system(size: 40, weight: .light))
-                                    .foregroundColor(Color.Text.tertiary)
-                            }
-                        }
-                    )
+                if isLoading {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: Color.Text.tertiary))
+                        .scaleEffect(0.8)
+                } else {
+                    Image(systemName: "music.note")
+                        .font(.system(size: 40, weight: .light))
+                        .foregroundColor(Color.Text.tertiary)
+                }
             }
         }
         .task(id: url) {
@@ -99,7 +96,6 @@ struct AsyncArtwork: View {
             .frame(width: size, height: size)
             .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
             .shadow(color: .black.opacity(0.4), radius: 20, y: 10)
-            .animation(.easeInOut(duration: 0.2), value: url)
     }
 }
 
@@ -129,22 +125,20 @@ struct BlurredArtworkBackground: View {
     @State private var image: UIImage?
 
     var body: some View {
-        Group {
+        ZStack {
+            Color.Background.default
+
             if let image = image {
                 Image(uiImage: image)
                     .resizable()
                     .aspectRatio(contentMode: .fill)
                     .blur(radius: blurRadius)
                     .opacity(opacity)
-            } else {
-                Color.Background.default
             }
         }
-        .ignoresSafeArea()
         .task(id: url) {
             await loadImage()
         }
-        .animation(.easeInOut(duration: 0.3), value: image != nil)
     }
 
     private func loadImage() async {

@@ -9,7 +9,6 @@ import SwiftUI
 
 struct NowPlayingView: View {
     @StateObject private var viewModel = NowPlayingViewModel()
-    @StateObject private var audioEngine = AudioEngine.shared
     @Environment(\.dismiss) private var dismiss
 
     @State private var isScrubbing = false
@@ -19,29 +18,10 @@ struct NowPlayingView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                // Background
                 backgroundGradient
                     .ignoresSafeArea()
 
-                if let track = viewModel.currentTrack {
-                    VStack(spacing: 0) {
-                        artworkSection(track: track)
-                        trackInfoSection(track: track)
-                        Spacer().frame(height: 8)
-                        qualitySection(track: track)
-                        Spacer().frame(height: 4)
-                        progressSection
-                        controlsSection
-                        ratingSection(track: track)
-                        Spacer()
-                        bottomControlsBar
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .padding(.horizontal, 24)
-                    .padding(.bottom, 24)
-                } else {
-                    emptyStateView
-                }
+                contentView
             }
             .navigationTitle("Now Playing")
             .navigationBarTitleDisplayMode(.inline)
@@ -63,63 +43,97 @@ struct NowPlayingView: View {
                 }
             }
         }
-        .onChange(of: viewModel.currentTime) { _, newValue in
-            if !isScrubbing {
-                scrubPosition = newValue
-            }
-        }
         .sheet(isPresented: $showQueue) {
-            QueueView(audioEngine: audioEngine)
+            QueueView(audioEngine: AudioEngine.shared)
         }
         .preferredColorScheme(.dark)
+    }
+
+    // MARK: - Content View
+
+    @ViewBuilder
+    private var contentView: some View {
+        if let track = viewModel.currentTrack {
+            VStack(spacing: 0) {
+                // Artwork
+                artworkView
+                    .padding(.top, 8)
+                    .padding(.bottom, 12)
+
+                // Track info
+                trackInfoView(track: track)
+
+                Spacer().frame(height: 8)
+
+                // Quality badge
+                QualityBadge(track: track, showSpecs: true)
+
+                Spacer().frame(height: 8)
+
+                // Progress
+                progressView
+
+                Spacer().frame(height: 4)
+
+                // Playback controls
+                playbackControls
+
+                Spacer().frame(height: 4)
+
+                // Rating
+                ratingView(track: track)
+
+                Spacer(minLength: 16)
+
+                // Bottom bar
+                bottomBar
+            }
+            .padding(.horizontal, 24)
+            .padding(.bottom, 24)
+        } else {
+            emptyStateView
+        }
     }
 
     // MARK: - Background
 
     private var backgroundGradient: some View {
-        ZStack {
-            Color.Background.default
-
-            BlurredArtworkBackground(
-                url: viewModel.coverArtURL,
-                blurRadius: 60,
-                opacity: 0.5
+        Color.Background.default
+            .overlay(
+                BlurredArtworkBackground(
+                    url: viewModel.coverArtURL,
+                    blurRadius: 60,
+                    opacity: 0.5
+                )
             )
-
-            LinearGradient(
-                colors: [
-                    Color.black.opacity(0.3),
-                    Color.black.opacity(0.1),
-                    Color.black.opacity(0.7)
-                ],
-                startPoint: .top,
-                endPoint: .bottom
+            .overlay(
+                LinearGradient(
+                    colors: [
+                        Color.black.opacity(0.3),
+                        Color.black.opacity(0.1),
+                        Color.black.opacity(0.7)
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
             )
-        }
     }
 
-    // MARK: - Artwork Section
+    // MARK: - Artwork
 
-    @ViewBuilder
-    private func artworkSection(track: Track) -> some View {
-        let artworkSize: CGFloat = 260
-
+    private var artworkView: some View {
         AsyncArtwork(
             url: viewModel.coverArtURL,
-            size: artworkSize,
+            size: 260,
             cornerRadius: 12
         )
-        .frame(width: artworkSize, height: artworkSize)
+        .frame(width: 260, height: 260)
         .shadow(color: .black.opacity(0.3), radius: 16, y: 8)
-        .frame(maxWidth: .infinity, alignment: .center)
-        .padding(.top, 8)
-        .padding(.bottom, 12)
     }
 
-    // MARK: - Track Info Section
+    // MARK: - Track Info
 
-    @ViewBuilder
-    private func trackInfoSection(track: Track) -> some View {
+    private func trackInfoView(track: Track) -> some View {
         VStack(spacing: 4) {
             Text(track.title)
                 .font(.title3)
@@ -140,29 +154,17 @@ struct NowPlayingView: View {
                     .lineLimit(1)
             }
         }
-        .frame(maxWidth: .infinity, alignment: .center)
     }
 
-    // MARK: - Quality Section
+    // MARK: - Progress
 
-    @ViewBuilder
-    private func qualitySection(track: Track) -> some View {
-        QualityBadge(track: track, showSpecs: true)
-            .frame(maxWidth: .infinity, alignment: .center)
-    }
-
-    // MARK: - Progress Section
-
-    private var progressSection: some View {
-        VStack(spacing: 8) {
+    private var progressView: some View {
+        VStack(spacing: 6) {
             Slider(
                 value: Binding(
                     get: { isScrubbing ? scrubPosition : viewModel.currentTime },
                     set: { newValue in
                         scrubPosition = newValue
-                        if isScrubbing {
-                            viewModel.seek(to: scrubPosition)
-                        }
                     }
                 ),
                 in: 0...max(safeDuration, 1),
@@ -177,29 +179,27 @@ struct NowPlayingView: View {
                 }
             )
             .tint(.white)
-            .accentColor(.white)
             .disabled(viewModel.duration <= 0.5)
 
             HStack {
                 Text(formatTime(isScrubbing ? scrubPosition : viewModel.currentTime))
                     .font(.caption)
-                    .foregroundColor(.white.opacity(0.8))
+                    .foregroundColor(.white.opacity(0.7))
                     .monospacedDigit()
                 Spacer()
                 Text("-\(formatTime(max(0, safeDuration - (isScrubbing ? scrubPosition : viewModel.currentTime))))")
                     .font(.caption)
-                    .foregroundColor(.white.opacity(0.8))
+                    .foregroundColor(.white.opacity(0.7))
                     .monospacedDigit()
             }
         }
-        .frame(maxWidth: .infinity)
         .padding(.vertical, 8)
     }
 
-    // MARK: - Controls Section
+    // MARK: - Playback Controls
 
-    private var controlsSection: some View {
-        HStack(spacing: 36) {
+    private var playbackControls: some View {
+        HStack(spacing: 40) {
             Button {
                 viewModel.previous()
             } label: {
@@ -213,7 +213,7 @@ struct NowPlayingView: View {
                 viewModel.togglePlayPause()
             } label: {
                 Image(systemName: viewModel.playbackState == .playing ? "pause.circle.fill" : "play.circle.fill")
-                    .font(.system(size: 60))
+                    .font(.system(size: 64))
                     .foregroundColor(.white)
             }
             .buttonStyle(.plain)
@@ -227,14 +227,12 @@ struct NowPlayingView: View {
             }
             .buttonStyle(.plain)
         }
-        .padding(.vertical, 4)
-        .frame(maxWidth: .infinity, alignment: .center)
+        .padding(.vertical, 8)
     }
 
-    // MARK: - Rating Section
+    // MARK: - Rating
 
-    @ViewBuilder
-    private func ratingSection(track: Track) -> some View {
+    private func ratingView(track: Track) -> some View {
         HStack(spacing: 48) {
             Button {
                 Task { await viewModel.rate(track.isThumbDown ? 0 : 1) }
@@ -254,13 +252,12 @@ struct NowPlayingView: View {
             }
             .buttonStyle(.plain)
         }
-        .padding(.top, 4)
-        .frame(maxWidth: .infinity, alignment: .center)
+        .padding(.vertical, 4)
     }
 
-    // MARK: - Bottom Controls Bar
+    // MARK: - Bottom Bar
 
-    private var bottomControlsBar: some View {
+    private var bottomBar: some View {
         HStack {
             Button {
                 viewModel.toggleShuffle()
@@ -283,7 +280,6 @@ struct NowPlayingView: View {
             .buttonStyle(.plain)
         }
         .padding(.vertical, 8)
-        .frame(maxWidth: .infinity)
     }
 
     // MARK: - Empty State
@@ -301,7 +297,6 @@ struct NowPlayingView: View {
                 .font(.subheadline)
                 .foregroundColor(.white.opacity(0.6))
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
     }
 
     // MARK: - Helpers
@@ -320,8 +315,6 @@ struct NowPlayingView: View {
         return String(format: "%d:%02d", minutes, remaining)
     }
 }
-
-// MARK: - Preview
 
 #if DEBUG
 struct NowPlayingView_Previews: PreviewProvider {
