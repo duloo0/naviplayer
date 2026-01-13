@@ -16,6 +16,8 @@ struct NowPlayingView: View {
     @State private var showQueue = false
     @State private var showTrackInfo = false
     @State private var dragOffset: CGFloat = 0
+    @State private var thumbUpScale: CGFloat = 1.0
+    @State private var thumbDownScale: CGFloat = 1.0
 
     var body: some View {
         ZStack {
@@ -194,24 +196,59 @@ struct NowPlayingView: View {
             // Thumbs rating on right
             HStack(spacing: 20) {
                 Button {
-                    Task { await viewModel.rate(isThumbDown ? 0 : 1) }
+                    Task {
+                        // Haptic feedback
+                        let generator = UINotificationFeedbackGenerator()
+                        generator.notificationOccurred(isThumbDown ? .warning : .error)
+
+                        // Animation
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.5)) {
+                            thumbDownScale = 1.3
+                        }
+
+                        await viewModel.rate(isThumbDown ? 0 : 1)
+
+                        // Reset scale
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.5)) {
+                            thumbDownScale = 1.0
+                        }
+                    }
                 } label: {
                     Image(systemName: isThumbDown ? "hand.thumbsdown.fill" : "hand.thumbsdown")
                         .font(.system(size: 22))
                         .foregroundColor(isThumbDown ? .red : .white.opacity(0.6))
+                        .scaleEffect(thumbDownScale)
                 }
                 .buttonStyle(.plain)
 
                 Button {
-                    Task { await viewModel.rate(isThumbUp ? 0 : 5) }
+                    Task {
+                        // Haptic feedback
+                        let generator = UINotificationFeedbackGenerator()
+                        generator.notificationOccurred(.success)
+
+                        // Animation
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.5)) {
+                            thumbUpScale = 1.3
+                        }
+
+                        await viewModel.rate(isThumbUp ? 0 : 5)
+
+                        // Reset scale
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.5)) {
+                            thumbUpScale = 1.0
+                        }
+                    }
                 } label: {
                     Image(systemName: isThumbUp ? "hand.thumbsup.fill" : "hand.thumbsup")
                         .font(.system(size: 22))
                         .foregroundColor(isThumbUp ? .green : .white.opacity(0.6))
+                        .scaleEffect(thumbUpScale)
                 }
                 .buttonStyle(.plain)
             }
             .padding(.top, 4)
+            .animation(.easeInOut(duration: 0.2), value: viewModel.currentRating)
         }
     }
 

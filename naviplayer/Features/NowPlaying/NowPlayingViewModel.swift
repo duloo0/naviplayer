@@ -164,6 +164,8 @@ final class NowPlayingViewModel: ObservableObject {
             // Update local state on success
             await MainActor.run {
                 currentRating = rating
+                // Sync the rating to AudioEngine's Track object so it persists
+                audioEngine.updateCurrentTrackRating(rating)
             }
         } catch {
             print("Failed to rate: \(error)")
