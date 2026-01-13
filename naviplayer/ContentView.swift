@@ -38,76 +38,48 @@ struct ContentView: View {
 
     // MARK: - Main Tab View
     private var mainTabView: some View {
-        TabView(selection: $selectedTab) {
-            // Library Tab
-            NavigationStack {
-                LibraryView()
+        ZStack(alignment: .bottom) {
+            // Content area based on selected tab
+            Group {
+                switch selectedTab {
+                case .library:
+                    NavigationStack {
+                        LibraryView()
+                    }
+                case .playlists:
+                    NavigationStack {
+                        PlaylistsView()
+                    }
+                case .radio:
+                    NavigationStack {
+                        RadioMenuView()
+                    }
+                case .search:
+                    NavigationStack {
+                        SearchView()
+                    }
+                case .settings:
+                    NavigationStack {
+                        SettingsView()
+                    }
+                }
             }
-            .safeAreaInset(edge: .bottom) {
-                miniPlayerIfNeeded
-            }
-            .tabItem {
-                Label("Library", systemImage: "music.note.house")
-            }
-            .tag(Tab.library)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-            // Playlists Tab
-            NavigationStack {
-                PlaylistsView()
+            // Floating bottom bar (always visible)
+            if !showNowPlaying {
+                FloatingBottomBar(
+                    audioEngine: audioEngine,
+                    selectedTab: $selectedTab,
+                    onPlayerTap: { showNowPlaying = true }
+                )
+                .transition(.move(edge: .bottom).combined(with: .opacity))
             }
-            .safeAreaInset(edge: .bottom) {
-                miniPlayerIfNeeded
-            }
-            .tabItem {
-                Label("Playlists", systemImage: "music.note.list")
-            }
-            .tag(Tab.playlists)
-
-            // Radio Tab
-            NavigationStack {
-                RadioMenuView()
-            }
-            .tabItem {
-                Label("Radio", systemImage: "radio")
-            }
-            .tag(Tab.radio)
-
-            // Search Tab
-            NavigationStack {
-                SearchView()
-            }
-            .safeAreaInset(edge: .bottom) {
-                miniPlayerIfNeeded
-            }
-            .tabItem {
-                Label("Search", systemImage: "magnifyingglass")
-            }
-            .tag(Tab.search)
-
-            // Settings Tab
-            NavigationStack {
-                SettingsView()
-            }
-            .safeAreaInset(edge: .bottom) {
-                miniPlayerIfNeeded
-            }
-            .tabItem {
-                Label("Settings", systemImage: "gearshape")
-            }
-            .tag(Tab.settings)
         }
-        .tint(Color.Accent.cyan)
+        .animation(.spring(response: 0.35, dampingFraction: 0.8), value: selectedTab)
+        .ignoresSafeArea(.keyboard)
         .fullScreenCover(isPresented: $showNowPlaying) {
             NowPlayingView()
-        }
-    }
-
-    @ViewBuilder
-    private var miniPlayerIfNeeded: some View {
-        if audioEngine.currentTrack != nil && !showNowPlaying {
-            MiniPlayer(audioEngine: audioEngine) {
-                showNowPlaying = true
-            }
         }
     }
 }
