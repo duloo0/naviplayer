@@ -13,7 +13,7 @@ struct FloatingBottomBar: View {
     @Binding var selectedTab: ContentView.Tab
     var onPlayerTap: () -> Void
 
-    private let cornerRadius: CGFloat = 28
+    private let cornerRadius: CGFloat = 24
 
     var body: some View {
         VStack(spacing: 0) {
@@ -32,13 +32,13 @@ struct FloatingBottomBar: View {
         .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
         .shadow(color: .black.opacity(0.6), radius: 24, x: 0, y: 10)
         .padding(.horizontal, 12)
-        .padding(.bottom, 8)
+        .padding(.bottom, 4)
     }
 
     // MARK: - Mini Player Row
 
     private func miniPlayerRow(track: Track) -> some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 10) {
             // Artwork
             AsyncImage(url: audioEngine.coverArtURL) { phase in
                 switch phase {
@@ -51,19 +51,19 @@ struct FloatingBottomBar: View {
                         .fill(Color.gray.opacity(0.3))
                 }
             }
-            .frame(width: 52, height: 52)
-            .clipShape(RoundedRectangle(cornerRadius: 8))
+            .frame(width: 44, height: 44)
+            .clipShape(RoundedRectangle(cornerRadius: 6))
             .onTapGesture { onPlayerTap() }
 
             // Track info - takes remaining space
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: 2) {
                 Text(track.title)
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(.white)
                     .lineLimit(1)
 
                 Text(track.effectiveArtist)
-                    .font(.system(size: 13))
+                    .font(.system(size: 12))
                     .foregroundColor(Color.white.opacity(0.6))
                     .lineLimit(1)
             }
@@ -75,9 +75,9 @@ struct FloatingBottomBar: View {
                 audioEngine.togglePlayPause()
             } label: {
                 Image(systemName: audioEngine.playbackState == .playing ? "pause.fill" : "play.fill")
-                    .font(.system(size: 22))
+                    .font(.system(size: 20))
                     .foregroundColor(.white)
-                    .frame(width: 48, height: 48)
+                    .frame(width: 42, height: 42)
                     .background(
                         Circle()
                             .stroke(Color.white.opacity(0.3), lineWidth: 1.5)
@@ -90,14 +90,14 @@ struct FloatingBottomBar: View {
                 Task { await audioEngine.next() }
             } label: {
                 Image(systemName: "forward.end.fill")
-                    .font(.system(size: 18))
+                    .font(.system(size: 16))
                     .foregroundColor(Color.white.opacity(0.5))
-                    .frame(width: 40, height: 48)
+                    .frame(width: 36, height: 42)
             }
             .buttonStyle(.plain)
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
     }
 
     // MARK: - Tab Row
@@ -111,7 +111,7 @@ struct FloatingBottomBar: View {
             tabButton(.settings, icon: "line.3.horizontal")
         }
         .padding(.horizontal, 8)
-        .padding(.vertical, 6)
+        .padding(.vertical, 4)
     }
 
     private func tabButton(_ tab: ContentView.Tab, icon: String) -> some View {
@@ -119,10 +119,10 @@ struct FloatingBottomBar: View {
             selectedTab = tab
         } label: {
             Image(systemName: icon)
-                .font(.system(size: 20, weight: selectedTab == tab ? .semibold : .regular))
+                .font(.system(size: 18, weight: selectedTab == tab ? .semibold : .regular))
                 .foregroundColor(selectedTab == tab ? .white : Color.white.opacity(0.4))
                 .frame(maxWidth: .infinity)
-                .frame(height: 44)
+                .frame(height: 36)
                 .background(
                     Group {
                         if selectedTab == tab {
