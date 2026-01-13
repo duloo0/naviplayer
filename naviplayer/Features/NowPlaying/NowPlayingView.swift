@@ -14,6 +14,7 @@ struct NowPlayingView: View {
     @State private var isScrubbing = false
     @State private var scrubPosition: Double = 0
     @State private var showQueue = false
+    @State private var dragOffset: CGFloat = 0
 
     var body: some View {
         NavigationStack {
@@ -43,6 +44,28 @@ struct NowPlayingView: View {
                 }
             }
         }
+        .offset(y: dragOffset)
+        .gesture(
+            DragGesture()
+                .onChanged { value in
+                    // Only allow dragging down
+                    if value.translation.height > 0 {
+                        dragOffset = value.translation.height
+                    }
+                }
+                .onEnded { value in
+                    // Dismiss if dragged down more than 100 points
+                    if value.translation.height > 100 {
+                        dismiss()
+                    } else {
+                        // Spring back
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                            dragOffset = 0
+                        }
+                    }
+                }
+        )
+        .animation(.interactiveSpring(), value: dragOffset)
         .sheet(isPresented: $showQueue) {
             QueueView(audioEngine: AudioEngine.shared)
         }
