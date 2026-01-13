@@ -20,12 +20,6 @@ struct FloatingBottomBar: View {
             // Row 1: Mini player (only when playing)
             if let track = audioEngine.currentTrack {
                 miniPlayerRow(track: track)
-
-                // Subtle divider between rows
-                Rectangle()
-                    .fill(Color.white.opacity(0.08))
-                    .frame(height: 1)
-                    .padding(.horizontal, 16)
             }
 
             // Row 2: Tab navigation
@@ -33,7 +27,7 @@ struct FloatingBottomBar: View {
         }
         .background(
             RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                .fill(Color(red: 0.11, green: 0.11, blue: 0.12))
+                .fill(Color(red: 0.12, green: 0.12, blue: 0.14).opacity(0.85))
         )
         .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
         .shadow(color: .black.opacity(0.6), radius: 24, x: 0, y: 10)
