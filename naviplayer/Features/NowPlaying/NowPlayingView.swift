@@ -2,7 +2,7 @@
 //  NowPlayingView.swift
 //  naviplayer
 //
-//  Full-screen now playing view based on harmonia-ios pattern
+//  Full-screen now playing view
 //
 
 import SwiftUI
@@ -18,30 +18,33 @@ struct NowPlayingView: View {
 
     var body: some View {
         NavigationStack {
-            GeometryReader { geometry in
-                ZStack {
-                    // Background
-                    backgroundGradient
-                        .ignoresSafeArea()
+            ZStack {
+                // Background
+                backgroundGradient
+                    .ignoresSafeArea()
 
-                    if let track = viewModel.currentTrack {
+                if let track = viewModel.currentTrack {
+                    ScrollView(showsIndicators: false) {
                         VStack(spacing: 0) {
-                            artworkSection(track: track, geometry: geometry)
+                            artworkSection(track: track)
                             trackInfoSection(track: track)
-                            Spacer(minLength: 8)
+                            Spacer().frame(height: 12)
                             qualitySection(track: track)
-                            Spacer(minLength: 8)
+                            Spacer().frame(height: 12)
                             progressSection
+                            Spacer().frame(height: 8)
                             controlsSection
+                            Spacer().frame(height: 8)
                             ratingSection(track: track)
-                            Spacer(minLength: 8)
+                            Spacer().frame(height: 16)
                             bottomControlsBar
+                            Spacer().frame(height: 20)
                         }
+                        .frame(maxWidth: .infinity)
                         .padding(.horizontal, 24)
-                        .padding(.bottom, geometry.safeAreaInsets.bottom > 0 ? 8 : 16)
-                    } else {
-                        emptyStateView
                     }
+                } else {
+                    emptyStateView
                 }
             }
             .navigationTitle("Now Playing")
@@ -102,9 +105,8 @@ struct NowPlayingView: View {
     // MARK: - Artwork Section
 
     @ViewBuilder
-    private func artworkSection(track: Track, geometry: GeometryProxy) -> some View {
-        let maxArtworkSize = min(geometry.size.width - 48, geometry.size.height * 0.38)
-        let artworkSize = max(120, maxArtworkSize)
+    private func artworkSection(track: Track) -> some View {
+        let artworkSize: CGFloat = 280
 
         AsyncArtwork(
             url: viewModel.coverArtURL,
@@ -113,8 +115,9 @@ struct NowPlayingView: View {
         )
         .frame(width: artworkSize, height: artworkSize)
         .shadow(color: .black.opacity(0.3), radius: 16, y: 8)
-        .padding(.top, 8)
-        .padding(.bottom, 16)
+        .frame(maxWidth: .infinity, alignment: .center)
+        .padding(.top, 16)
+        .padding(.bottom, 20)
     }
 
     // MARK: - Track Info Section
@@ -141,6 +144,7 @@ struct NowPlayingView: View {
                     .lineLimit(1)
             }
         }
+        .frame(maxWidth: .infinity, alignment: .center)
     }
 
     // MARK: - Quality Section
@@ -148,7 +152,7 @@ struct NowPlayingView: View {
     @ViewBuilder
     private func qualitySection(track: Track) -> some View {
         QualityBadge(track: track, showSpecs: true)
-            .padding(.vertical, 4)
+            .frame(maxWidth: .infinity, alignment: .center)
     }
 
     // MARK: - Progress Section
@@ -191,7 +195,7 @@ struct NowPlayingView: View {
                     .monospacedDigit()
             }
         }
-        .padding(.bottom, 8)
+        .frame(maxWidth: .infinity)
     }
 
     // MARK: - Controls Section
@@ -225,7 +229,7 @@ struct NowPlayingView: View {
             }
             .buttonStyle(.plain)
         }
-        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, alignment: .center)
     }
 
     // MARK: - Rating Section
@@ -251,7 +255,7 @@ struct NowPlayingView: View {
             }
             .buttonStyle(.plain)
         }
-        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, alignment: .center)
     }
 
     // MARK: - Bottom Controls Bar
@@ -278,7 +282,7 @@ struct NowPlayingView: View {
             }
             .buttonStyle(.plain)
         }
-        .padding(.horizontal, 8)
+        .frame(maxWidth: .infinity)
     }
 
     // MARK: - Empty State
@@ -296,6 +300,7 @@ struct NowPlayingView: View {
                 .font(.subheadline)
                 .foregroundColor(.white.opacity(0.6))
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
     }
 
     // MARK: - Helpers
