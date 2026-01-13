@@ -12,195 +12,138 @@ struct FloatingBottomBar: View {
     @Binding var selectedTab: ContentView.Tab
     var onPlayerTap: () -> Void
 
-    @State private var isPlayerPressed = false
+    private let barHeight: CGFloat = 72
+    private let cornerRadius: CGFloat = 24
 
     var body: some View {
         VStack(spacing: 0) {
-            // Progress bar at top (only when playing)
+            // Progress bar at very top of bubble
             if audioEngine.currentTrack != nil {
                 GeometryReader { geo in
-                    ZStack(alignment: .leading) {
-                        Rectangle()
-                            .fill(Color.white.opacity(0.1))
-                        Rectangle()
-                            .fill(Color.Accent.cyan)
-                            .frame(width: geo.size.width * audioEngine.progress)
-                    }
+                    Rectangle()
+                        .fill(Color.Accent.cyan)
+                        .frame(width: geo.size.width * audioEngine.progress, height: 3)
                 }
                 .frame(height: 3)
-                .clipShape(RoundedRectangle(cornerRadius: 1.5))
+                .background(Color.white.opacity(0.1))
             }
 
-            // Main content
-            HStack(spacing: 0) {
-                // Mini player section (left side)
+            // Main content row
+            HStack(spacing: 8) {
+                // Mini player section (when playing)
                 if let track = audioEngine.currentTrack {
-                    miniPlayerSection(track: track)
-                        .contentShape(Rectangle())
-                        .onTapGesture { onPlayerTap() }
-                        .simultaneousGesture(
-                            DragGesture(minimumDistance: 0)
-                                .onChanged { _ in isPlayerPressed = true }
-                                .onEnded { _ in isPlayerPressed = false }
-                        )
-                        .scaleEffect(isPlayerPressed ? 0.98 : 1.0)
-                        .animation(.easeOut(duration: 0.1), value: isPlayerPressed)
+                    // Artwork
+                    AsyncImage(url: audioEngine.coverArtURL) { phase in
+                        switch phase {
+                        case .success(let image):
+                            image
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                        default:
+                            Rectangle()
+                                .fill(Color.gray.opacity(0.3))
+                        }
+                    }
+                    .frame(width: 44, height: 44)
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                    .onTapGesture { onPlayerTap() }
 
-                    // Divider between player and tabs
+                    // Track info
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(track.title)
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(.white)
+                            .lineLimit(1)
+
+                        Text(track.effectiveArtist)
+                            .font(.system(size: 11))
+                            .foregroundColor(Color.white.opacity(0.6))
+                            .lineLimit(1)
+                    }
+                    .frame(maxWidth: 90, alignment: .leading)
+                    .onTapGesture { onPlayerTap() }
+
+                    // Play/Pause
+                    Button {
+                        audioEngine.togglePlayPause()
+                    } label: {
+                        Image(systemName: audioEngine.playbackState == .playing ? "pause.fill" : "play.fill")
+                            .font(.system(size: 20))
+                            .foregroundColor(.white)
+                            .frame(width: 40, height: 40)
+                    }
+                    .buttonStyle(.plain)
+
+                    // Next
+                    Button {
+                        Task { await audioEngine.next() }
+                    } label: {
+                        Image(systemName: "forward.fill")
+                            .font(.system(size: 14))
+                            .foregroundColor(Color.white.opacity(0.6))
+                            .frame(width: 32, height: 40)
+                    }
+                    .buttonStyle(.plain)
+
+                    // Vertical divider
                     Rectangle()
                         .fill(Color.white.opacity(0.15))
-                        .frame(width: 1, height: 40)
-                        .padding(.horizontal, 12)
+                        .frame(width: 1, height: 32)
+                        .padding(.horizontal, 4)
                 }
 
-                // Tab icons section (right side)
-                tabIconsSection
+                Spacer(minLength: 0)
+
+                // Tab icons
+                HStack(spacing: 0) {
+                    tabButton(.library, icon: "music.note.house")
+                    tabButton(.playlists, icon: "text.badge.plus")
+                    tabButton(.radio, icon: "radio")
+                    tabButton(.search, icon: "magnifyingglass")
+                    tabButton(.settings, icon: "gearshape")
+                }
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, audioEngine.currentTrack != nil ? 10 : 14)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
         }
-        .background(Color.Background.elevated)
-        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .shadow(color: .black.opacity(0.5), radius: 20, y: 8)
-        .padding(.horizontal, 12)
+        .frame(height: audioEngine.currentTrack != nil ? barHeight : 60)
+        .background(
+            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                .fill(Color(red: 0.12, green: 0.12, blue: 0.14))
+        )
+        .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+        .shadow(color: .black.opacity(0.5), radius: 20, x: 0, y: 8)
+        .padding(.horizontal, 16)
         .padding(.bottom, 8)
     }
 
-    // MARK: - Mini Player Section
-
-    private func miniPlayerSection(track: Track) -> some View {
-        HStack(spacing: 12) {
-            // Artwork
-            MiniArtwork(
-                url: audioEngine.coverArtURL,
-                size: 44,
-                cornerRadius: 8
-            )
-
-            // Track info
-            VStack(alignment: .leading, spacing: 2) {
-                Text(track.title)
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(Color.Text.primary)
-                    .lineLimit(1)
-
-                Text(track.effectiveArtist)
-                    .font(.system(size: 12))
-                    .foregroundColor(Color.Text.secondary)
-                    .lineLimit(1)
-            }
-            .frame(maxWidth: 120, alignment: .leading)
-
-            Spacer(minLength: 8)
-
-            // Play/Pause button
-            Button {
-                audioEngine.togglePlayPause()
-            } label: {
-                Image(systemName: audioEngine.playbackState == .playing ? "pause.fill" : "play.fill")
-                    .font(.system(size: 20, weight: .medium))
-                    .foregroundColor(Color.Text.primary)
-                    .frame(width: 40, height: 40)
-            }
-            .buttonStyle(.plain)
-
-            // Next button
-            Button {
-                Task { await audioEngine.next() }
-            } label: {
-                Image(systemName: "forward.fill")
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(Color.Text.secondary)
-                    .frame(width: 36, height: 40)
-            }
-            .buttonStyle(.plain)
+    private func tabButton(_ tab: ContentView.Tab, icon: String) -> some View {
+        Button {
+            selectedTab = tab
+        } label: {
+            Image(systemName: selectedTab == tab ? filledIcon(icon) : icon)
+                .font(.system(size: 20))
+                .foregroundColor(selectedTab == tab ? Color.Accent.cyan : Color.white.opacity(0.5))
+                .frame(width: 40, height: 40)
         }
+        .buttonStyle(.plain)
     }
 
-    // MARK: - Tab Icons Section
-
-    private var tabIconsSection: some View {
-        HStack(spacing: 4) {
-            TabIconButton(
-                icon: "music.note.house",
-                isSelected: selectedTab == .library
-            ) { selectedTab = .library }
-
-            TabIconButton(
-                icon: "music.note.list",
-                isSelected: selectedTab == .playlists
-            ) { selectedTab = .playlists }
-
-            TabIconButton(
-                icon: "radio",
-                isSelected: selectedTab == .radio
-            ) { selectedTab = .radio }
-
-            TabIconButton(
-                icon: "magnifyingglass",
-                isSelected: selectedTab == .search
-            ) { selectedTab = .search }
-
-            TabIconButton(
-                icon: "gearshape",
-                isSelected: selectedTab == .settings
-            ) { selectedTab = .settings }
-        }
-    }
-}
-
-// MARK: - Tab Icon Button
-
-struct TabIconButton: View {
-    let icon: String
-    let isSelected: Bool
-    let action: () -> Void
-
-    @State private var isPressed = false
-
-    var body: some View {
-        Button(action: action) {
-            VStack(spacing: 2) {
-                Image(systemName: isSelected ? filledIcon : icon)
-                    .font(.system(size: 20, weight: isSelected ? .semibold : .regular))
-                    .foregroundColor(isSelected ? Color.Accent.cyan : Color.Text.tertiary)
-                    .frame(width: 44, height: 32)
-            }
-        }
-        .buttonStyle(TabButtonStyle())
-    }
-
-    private var filledIcon: String {
+    private func filledIcon(_ icon: String) -> String {
         switch icon {
         case "music.note.house": return "music.note.house.fill"
-        case "music.note.list": return "music.note.list"
         case "radio": return "radio.fill"
-        case "magnifyingglass": return "magnifyingglass"
         case "gearshape": return "gearshape.fill"
         default: return icon
         }
     }
 }
 
-// MARK: - Tab Button Style
-
-struct TabButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .scaleEffect(configuration.isPressed ? 0.9 : 1.0)
-            .animation(.easeOut(duration: 0.1), value: configuration.isPressed)
-    }
-}
-
-// MARK: - Preview
-
 #if DEBUG
 struct FloatingBottomBar_Previews: PreviewProvider {
     static var previews: some View {
         ZStack {
-            Color.Background.default
-                .ignoresSafeArea()
-
+            Color.black.ignoresSafeArea()
             VStack {
                 Spacer()
                 FloatingBottomBar(
@@ -210,7 +153,6 @@ struct FloatingBottomBar_Previews: PreviewProvider {
                 )
             }
         }
-        .preferredColorScheme(.dark)
     }
 }
 #endif
