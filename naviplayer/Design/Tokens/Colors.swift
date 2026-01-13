@@ -54,6 +54,8 @@ extension Color {
         static let error = Color(hex: 0xFF4757)
         /// Info blue - #00BFFF
         static let info = Color(hex: 0x00BFFF)
+        /// Purple accent - #9B59B6
+        static let purple = Color(hex: 0x9B59B6)
     }
 }
 

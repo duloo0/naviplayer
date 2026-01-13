@@ -57,8 +57,18 @@ struct RadioMenuView: View {
                             }
                             .buttonStyle(.plain)
 
-                            // More radio options can be added here in the future
-                            // For example: Genre Radio, Artist Radio, Decade Radio, etc.
+                            // Decade Radio
+                            NavigationLink {
+                                DecadeRadioPickerView()
+                            } label: {
+                                RadioOptionCard(
+                                    icon: "calendar",
+                                    title: "Decade Radio",
+                                    description: "Radio filtered by decade (2020s, 90s, 80s, etc.)",
+                                    accentColor: Color.Accent.purple
+                                )
+                            }
+                            .buttonStyle(.plain)
 
                             RadioOptionCard(
                                 icon: "music.note.list",

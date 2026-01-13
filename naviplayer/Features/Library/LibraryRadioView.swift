@@ -8,8 +8,38 @@
 import SwiftUI
 import Combine
 
+// MARK: - Decade Preset Model
+struct DecadePreset: Identifiable {
+    let id = UUID()
+    let label: String
+    let icon: String
+    let fromYear: Int
+    let toYear: Int
+
+    static let presets: [DecadePreset] = [
+        DecadePreset(label: "2020s", icon: "sparkles", fromYear: 2020, toYear: 2029),
+        DecadePreset(label: "2010s", icon: "waveform", fromYear: 2010, toYear: 2019),
+        DecadePreset(label: "2000s", icon: "music.note", fromYear: 2000, toYear: 2009),
+        DecadePreset(label: "90s", icon: "guitars", fromYear: 1990, toYear: 1999),
+        DecadePreset(label: "80s", icon: "pianokeys", fromYear: 1980, toYear: 1989),
+        DecadePreset(label: "70s", icon: "music.mic", fromYear: 1970, toYear: 1979),
+        DecadePreset(label: "60s & older", icon: "record.circle", fromYear: 1900, toYear: 1969),
+    ]
+}
+
 struct LibraryRadioView: View {
-    @StateObject private var viewModel = LibraryRadioViewModel()
+    @StateObject private var viewModel: LibraryRadioViewModel
+
+    /// Optional label for decade radio (e.g., "90s Radio")
+    let radioLabel: String?
+
+    init(fromYear: Int? = nil, toYear: Int? = nil, radioLabel: String? = nil) {
+        self.radioLabel = radioLabel
+        _viewModel = StateObject(wrappedValue: LibraryRadioViewModel(
+            fromYear: fromYear,
+            toYear: toYear
+        ))
+    }
 
     var body: some View {
         ZStack {
@@ -61,7 +91,7 @@ struct LibraryRadioView: View {
                 emptyView
             }
         }
-        .navigationTitle("Library Radio")
+        .navigationTitle(radioLabel ?? "Library Radio")
         .navigationBarTitleDisplayMode(.inline)
         .task {
             await viewModel.loadRadio()
@@ -247,8 +277,9 @@ final class LibraryRadioViewModel: ObservableObject {
 
     // MARK: - Initialization
 
-    init() {
-        // Observe audio engine state
+    init(fromYear: Int? = nil, toYear: Int? = nil) {
+        self.fromYear = fromYear
+        self.toYear = toYear
         setupBindings()
     }
 
@@ -360,8 +391,14 @@ final class LibraryRadioViewModel: ObservableObject {
 #if DEBUG
 struct LibraryRadioView_Previews: PreviewProvider {
     static var previews: some View {
-        NavigationStack {
-            LibraryRadioView()
+        Group {
+            NavigationStack {
+                LibraryRadioView()
+            }
+
+            NavigationStack {
+                LibraryRadioView(fromYear: 1990, toYear: 1999, radioLabel: "90s Radio")
+            }
         }
     }
 }
