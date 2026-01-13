@@ -17,32 +17,11 @@ struct NowPlayingView: View {
     @State private var dragOffset: CGFloat = 0
 
     var body: some View {
-        NavigationStack {
-            ZStack {
-                backgroundGradient
-                    .ignoresSafeArea()
+        ZStack {
+            backgroundGradient
+                .ignoresSafeArea()
 
-                contentView
-            }
-            .navigationTitle("Now Playing")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button {
-                        dismiss()
-                    } label: {
-                        Image(systemName: "chevron.down")
-                            .font(.system(size: 16, weight: .semibold))
-                    }
-                }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        showQueue = true
-                    } label: {
-                        Image(systemName: "list.bullet")
-                    }
-                }
-            }
+            contentView
         }
         .offset(y: dragOffset)
         .gesture(
@@ -78,44 +57,68 @@ struct NowPlayingView: View {
     private var contentView: some View {
         if let track = viewModel.currentTrack {
             VStack(spacing: 0) {
+                // Drag handle
+                dragHandle
+                    .padding(.top, 12)
+
+                // Playing From context
+                playingFromView(track: track)
+                    .padding(.top, 16)
+                    .padding(.bottom, 20)
+
                 // Artwork
                 artworkView
-                    .padding(.top, 8)
-                    .padding(.bottom, 12)
 
-                // Track info
+                Spacer().frame(height: 24)
+
+                // Track info with thumbs rating
                 trackInfoView(track: track)
 
-                Spacer().frame(height: 8)
-
-                // Quality badge
-                QualityBadge(track: track, showSpecs: true)
-
-                Spacer().frame(height: 8)
+                Spacer().frame(height: 20)
 
                 // Progress
                 progressView
 
-                Spacer().frame(height: 4)
+                Spacer().frame(height: 16)
 
-                // Playback controls
+                // Unified playback controls (shuffle, prev, play, next, repeat)
                 playbackControls
 
-                Spacer().frame(height: 4)
+                Spacer(minLength: 20)
 
-                // Rating
-                ratingView(track: track)
-
-                Spacer(minLength: 16)
-
-                // Bottom bar
-                bottomBar
+                // Bottom info bar
+                bottomInfoBar(track: track)
             }
             .padding(.horizontal, 24)
             .padding(.bottom, 24)
         } else {
             emptyStateView
         }
+    }
+
+    // MARK: - Drag Handle
+
+    private var dragHandle: some View {
+        Capsule()
+            .fill(Color.white.opacity(0.4))
+            .frame(width: 36, height: 5)
+    }
+
+    // MARK: - Playing From
+
+    private func playingFromView(track: Track) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text("PLAYING FROM")
+                .font(.system(size: 11, weight: .medium))
+                .foregroundColor(.white.opacity(0.5))
+                .tracking(1)
+
+            Text(track.album ?? track.effectiveArtist)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundColor(.white)
+                .lineLimit(1)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     // MARK: - Background
@@ -145,37 +148,64 @@ struct NowPlayingView: View {
     // MARK: - Artwork
 
     private var artworkView: some View {
-        AsyncArtwork(
-            url: viewModel.coverArtURL,
-            size: 260,
-            cornerRadius: 12
-        )
-        .frame(width: 260, height: 260)
-        .shadow(color: .black.opacity(0.3), radius: 16, y: 8)
+        GeometryReader { geo in
+            let size = min(geo.size.width, 320)
+            AsyncArtwork(
+                url: viewModel.coverArtURL,
+                size: size,
+                cornerRadius: 12
+            )
+            .frame(width: size, height: size)
+            .shadow(color: .black.opacity(0.4), radius: 20, y: 10)
+            .frame(maxWidth: .infinity)
+        }
+        .frame(height: 320)
     }
 
-    // MARK: - Track Info
+    // MARK: - Track Info (with thumbs rating on right)
 
     private func trackInfoView(track: Track) -> some View {
-        VStack(spacing: 4) {
-            Text(track.title)
-                .font(.title3)
-                .fontWeight(.bold)
-                .foregroundColor(.white)
-                .lineLimit(2)
-                .multilineTextAlignment(.center)
+        let isThumbDown = viewModel.currentRating == 1
+        let isThumbUp = viewModel.currentRating == 5
 
-            Text(track.effectiveArtist)
-                .font(.subheadline)
-                .foregroundColor(.white.opacity(0.7))
-                .lineLimit(1)
+        return HStack(alignment: .top, spacing: 16) {
+            // Title and artist on left
+            VStack(alignment: .leading, spacing: 4) {
+                Text(track.title)
+                    .font(.title2)
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
+                    .lineLimit(2)
 
-            if let album = track.album {
-                Text(album)
-                    .font(.caption)
-                    .foregroundColor(.white.opacity(0.5))
+                Text(track.effectiveArtist)
+                    .font(.subheadline)
+                    .foregroundColor(.white.opacity(0.7))
                     .lineLimit(1)
             }
+
+            Spacer()
+
+            // Thumbs rating on right
+            HStack(spacing: 20) {
+                Button {
+                    Task { await viewModel.rate(isThumbDown ? 0 : 1) }
+                } label: {
+                    Image(systemName: isThumbDown ? "hand.thumbsdown.fill" : "hand.thumbsdown")
+                        .font(.system(size: 22))
+                        .foregroundColor(isThumbDown ? .red : .white.opacity(0.6))
+                }
+                .buttonStyle(.plain)
+
+                Button {
+                    Task { await viewModel.rate(isThumbUp ? 0 : 5) }
+                } label: {
+                    Image(systemName: isThumbUp ? "hand.thumbsup.fill" : "hand.thumbsup")
+                        .font(.system(size: 22))
+                        .foregroundColor(isThumbUp ? .green : .white.opacity(0.6))
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.top, 4)
         }
     }
 
@@ -219,89 +249,113 @@ struct NowPlayingView: View {
         .padding(.vertical, 8)
     }
 
-    // MARK: - Playback Controls
+    // MARK: - Playback Controls (Unified Row)
 
     private var playbackControls: some View {
-        HStack(spacing: 40) {
+        HStack(spacing: 0) {
+            // Shuffle button with pill highlight
+            Button {
+                viewModel.toggleShuffle()
+            } label: {
+                Image(systemName: "shuffle")
+                    .font(.system(size: 18))
+                    .foregroundColor(viewModel.shuffleEnabled ? .white : .white.opacity(0.5))
+                    .frame(width: 36, height: 36)
+                    .background(
+                        viewModel.shuffleEnabled ?
+                            Capsule().fill(Color.white.opacity(0.2)) : nil
+                    )
+            }
+            .buttonStyle(.plain)
+
+            Spacer()
+
+            // Previous
             Button {
                 viewModel.previous()
             } label: {
-                Image(systemName: "backward.fill")
+                Image(systemName: "backward.end.fill")
                     .font(.system(size: 28))
                     .foregroundColor(.white)
             }
             .buttonStyle(.plain)
 
+            Spacer()
+
+            // Play/Pause (larger)
             Button {
                 viewModel.togglePlayPause()
             } label: {
-                Image(systemName: viewModel.playbackState == .playing ? "pause.circle.fill" : "play.circle.fill")
-                    .font(.system(size: 64))
+                Image(systemName: viewModel.playbackState == .playing ? "pause.fill" : "play.fill")
+                    .font(.system(size: 44))
                     .foregroundColor(.white)
             }
             .buttonStyle(.plain)
 
+            Spacer()
+
+            // Next
             Button {
                 viewModel.next()
             } label: {
-                Image(systemName: "forward.fill")
+                Image(systemName: "forward.end.fill")
                     .font(.system(size: 28))
                     .foregroundColor(.white)
+            }
+            .buttonStyle(.plain)
+
+            Spacer()
+
+            // Repeat button with pill highlight
+            Button {
+                viewModel.cycleRepeatMode()
+            } label: {
+                Image(systemName: viewModel.repeatMode == .one ? "repeat.1" : "repeat")
+                    .font(.system(size: 18))
+                    .foregroundColor(viewModel.repeatMode != .off ? .white : .white.opacity(0.5))
+                    .frame(width: 36, height: 36)
+                    .background(
+                        viewModel.repeatMode != .off ?
+                            Capsule().fill(Color.white.opacity(0.2)) : nil
+                    )
             }
             .buttonStyle(.plain)
         }
         .padding(.vertical, 8)
     }
 
-    // MARK: - Rating
+    // MARK: - Bottom Info Bar
 
-    private func ratingView(track: Track) -> some View {
-        let isThumbDown = viewModel.currentRating == 1
-        let isThumbUp = viewModel.currentRating == 5
-
-        return HStack(spacing: 48) {
-            Button {
-                Task { await viewModel.rate(isThumbDown ? 0 : 1) }
-            } label: {
-                Image(systemName: isThumbDown ? "hand.thumbsdown.fill" : "hand.thumbsdown")
-                    .font(.system(size: 24))
-                    .foregroundColor(isThumbDown ? .red : .white.opacity(0.6))
-            }
-            .buttonStyle(.plain)
-
-            Button {
-                Task { await viewModel.rate(isThumbUp ? 0 : 5) }
-            } label: {
-                Image(systemName: isThumbUp ? "hand.thumbsup.fill" : "hand.thumbsup")
-                    .font(.system(size: 24))
-                    .foregroundColor(isThumbUp ? .green : .white.opacity(0.6))
-            }
-            .buttonStyle(.plain)
-        }
-        .padding(.vertical, 4)
-    }
-
-    // MARK: - Bottom Bar
-
-    private var bottomBar: some View {
+    private func bottomInfoBar(track: Track) -> some View {
         HStack {
+            // Queue button with count
             Button {
-                viewModel.toggleShuffle()
+                showQueue = true
             } label: {
-                Image(systemName: viewModel.shuffleEnabled ? "shuffle.circle.fill" : "shuffle")
-                    .font(.system(size: 22))
-                    .foregroundColor(viewModel.shuffleEnabled ? Color.Accent.cyan : .white.opacity(0.6))
+                HStack(spacing: 4) {
+                    Text("\(AudioEngine.shared.queue.count)")
+                        .font(.system(size: 14, weight: .semibold))
+                    Image(systemName: "list.bullet")
+                        .font(.system(size: 16))
+                }
+                .foregroundColor(.white.opacity(0.6))
             }
             .buttonStyle(.plain)
 
             Spacer()
 
+            // Audio quality badge
+            QualityBadge(track: track, showSpecs: false)
+
+            Spacer()
+
+            // Info button (placeholder for now)
             Button {
-                viewModel.cycleRepeatMode()
+                // Could show track details
             } label: {
-                Image(systemName: viewModel.repeatMode == .one ? "repeat.1" : "repeat")
-                    .font(.system(size: 22))
-                    .foregroundColor(viewModel.repeatMode != .off ? Color.Accent.cyan : .white.opacity(0.6))
+                Image(systemName: "info.circle")
+                    .font(.system(size: 20))
+                    .foregroundColor(.white.opacity(0.6))
             }
             .buttonStyle(.plain)
         }
