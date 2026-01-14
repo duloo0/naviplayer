@@ -731,6 +731,23 @@ struct SettingsView: View {
                         }
                     }
 
+                    // Transcoding quality settings
+                    Section {
+                        Picker("Streaming Quality", selection: $audioSettings.transcodingQuality) {
+                            ForEach(TranscodingQuality.allCases) { quality in
+                                Text(quality.displayName).tag(quality)
+                            }
+                        }
+
+                        Text(audioSettings.transcodingQuality.description)
+                            .font(.caption)
+                            .foregroundColor(Color.Text.tertiary)
+                    } header: {
+                        Text("Streaming")
+                    } footer: {
+                        Text("Choose audio quality for streaming. Original quality streams files as-is. Other options transcode on the server to save bandwidth.")
+                    }
+
                     Section {
                         Button("Disconnect", role: .destructive) {
                             SubsonicClient.shared.disconnect()

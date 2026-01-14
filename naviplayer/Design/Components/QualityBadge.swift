@@ -12,6 +12,7 @@ struct QualityBadge: View {
     let track: Track
     var showSpecs: Bool = false
     var size: BadgeSize = .medium
+    var transcodingQuality: TranscodingQuality? = nil
 
     enum BadgeSize {
         case small
@@ -60,6 +61,12 @@ struct QualityBadge: View {
     // MARK: - Badge Properties
 
     private var badgeText: String {
+        // If transcoded, show transcoded format
+        if let transcoding = transcodingQuality, transcoding != .original {
+            return transcoding.formatDisplayName
+        }
+
+        // Otherwise show original quality
         switch track.qualityTier {
         case .hiRes:
             return "Hi-Res"
@@ -73,6 +80,12 @@ struct QualityBadge: View {
     }
 
     private var badgeColor: Color {
+        // If transcoded, use a distinct color (orange/amber)
+        if let transcoding = transcodingQuality, transcoding != .original {
+            return Color.orange
+        }
+
+        // Otherwise use original quality colors
         switch track.qualityTier {
         case .hiRes:
             return Color.Quality.hiRes
@@ -86,6 +99,14 @@ struct QualityBadge: View {
     }
 
     private var specsString: String? {
+        // If transcoded, show transcoded specs
+        if let transcoding = transcodingQuality, transcoding != .original {
+            if let bitRate = transcoding.maxBitRate, let format = transcoding.format {
+                return "\(format.uppercased()) \(bitRate) kbps"
+            }
+        }
+
+        // Otherwise show original specs
         var parts: [String] = []
 
         if let sampleRate = track.formattedSampleRate {
@@ -108,11 +129,12 @@ struct QualityBadge: View {
 // MARK: - Quality Tier Badge (Simplified)
 struct QualityTierBadge: View {
     let track: Track
+    var transcodingQuality: TranscodingQuality? = nil
 
     var body: some View {
-        // Only show for non-lossy quality
-        if track.qualityTier != .lossy {
-            QualityBadge(track: track, showSpecs: false, size: .small)
+        // Show if non-lossy quality OR if transcoded
+        if track.qualityTier != .lossy || (transcodingQuality != nil && transcodingQuality != .original) {
+            QualityBadge(track: track, showSpecs: false, size: .small, transcodingQuality: transcodingQuality)
         }
     }
 }
@@ -134,18 +156,21 @@ struct EnhancedSignalPathView: View {
     let outputDevice: String
     let isShuffleMode: Bool
     let isAlbumPlayback: Bool
+    let transcodingQuality: TranscodingQuality?
     @State private var isExpanded = false
 
     init(
         track: Track,
         outputDevice: String = "Device",
         isShuffleMode: Bool = false,
-        isAlbumPlayback: Bool = false
+        isAlbumPlayback: Bool = false,
+        transcodingQuality: TranscodingQuality? = nil
     ) {
         self.track = track
         self.outputDevice = outputDevice
         self.isShuffleMode = isShuffleMode
         self.isAlbumPlayback = isAlbumPlayback
+        self.transcodingQuality = transcodingQuality
     }
 
     private var signalPath: SignalPath {
@@ -153,7 +178,8 @@ struct EnhancedSignalPathView: View {
             from: track,
             outputDevice: outputDevice,
             isShuffleMode: isShuffleMode,
-            isAlbumPlayback: isAlbumPlayback
+            isAlbumPlayback: isAlbumPlayback,
+            transcodingQuality: transcodingQuality
         )
     }
 

@@ -36,6 +36,7 @@ enum SignalQuality {
 // MARK: - Signal Stage Type
 enum SignalPathStageType {
     case source         // Original file
+    case transcode      // Server-side transcoding
     case decode         // Decoder (FLAC, AAC, etc.)
     case dsp            // Any DSP processing
     case replayGain     // Volume normalization
@@ -79,7 +80,8 @@ struct SignalPath {
         from track: Track,
         outputDevice: String,
         isShuffleMode: Bool = false,
-        isAlbumPlayback: Bool = false
+        isAlbumPlayback: Bool = false,
+        transcodingQuality: TranscodingQuality? = nil
     ) -> SignalPath {
         var stages: [SignalPathStage] = []
         var lowestQuality: SignalQuality = .lossless
@@ -99,7 +101,23 @@ struct SignalPath {
             icon: "doc.fill"
         ))
 
-        // 2. Decode stage
+        // 2. Transcoding stage (if active)
+        if let transcoding = transcodingQuality, transcoding != .original {
+            // Transcoding always results in lossy output
+            lowestQuality = .standard
+
+            stages.append(SignalPathStage(
+                type: .transcode,
+                name: "Transcode",
+                detail: transcoding.formatDisplayName,
+                quality: .standard,
+                sampleRate: nil,
+                bitDepth: nil,
+                icon: "arrow.triangle.2.circlepath"
+            ))
+        }
+
+        // 3. Decode stage
         let decoderName = Self.decoderName(for: track)
         stages.append(SignalPathStage(
             type: .decode,
@@ -111,7 +129,7 @@ struct SignalPath {
             icon: "waveform"
         ))
 
-        // 3. ReplayGain (only if normalization is enabled and track has RG data)
+        // 4. ReplayGain (only if normalization is enabled and track has RG data)
         let audioSettings = AudioSettings.shared
         if audioSettings.normalizationMode != .off,
            let _ = track.replayGain,
@@ -144,7 +162,7 @@ struct SignalPath {
             ))
         }
 
-        // 4. Output stage
+        // 5. Output stage
         stages.append(SignalPathStage(
             type: .output,
             name: "Output",

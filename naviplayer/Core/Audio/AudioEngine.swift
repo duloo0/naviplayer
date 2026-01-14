@@ -21,6 +21,7 @@ final class AudioEngine: ObservableObject {
     @Published private(set) var isBuffering = false
     @Published private(set) var bufferProgress: Double = 0
     @Published private(set) var currentOutputDevice: String = "iPhone Speaker"
+    @Published private(set) var currentTranscodingQuality: TranscodingQuality = .original
 
     // MARK: - Queue State
     @Published private(set) var queue: [Track] = []
@@ -373,6 +374,7 @@ final class AudioEngine: ObservableObject {
 
         let track = queue[currentIndex]
         currentTrack = track
+        currentTranscodingQuality = audioSettings.transcodingQuality
         duration = track.durationInterval
         currentTime = 0
         progress = 0
@@ -384,7 +386,11 @@ final class AudioEngine: ObservableObject {
             playerItem = cached
             configurePlayerItem(playerItem, for: track)
         } else {
-            guard let url = client.streamURL(for: track) else {
+            guard let url = client.streamURL(
+                for: track,
+                maxBitRate: audioSettings.transcodingQuality.maxBitRate,
+                format: audioSettings.transcodingQuality.format
+            ) else {
                 print("Failed to get stream URL for track: \(track.id)")
                 isBuffering = false
                 return
@@ -580,7 +586,11 @@ final class AudioEngine: ObservableObject {
     }
 
     private func preloadTrack(_ track: Track) async {
-        guard let url = client.streamURL(for: track) else { return }
+        guard let url = client.streamURL(
+            for: track,
+            maxBitRate: audioSettings.transcodingQuality.maxBitRate,
+            format: audioSettings.transcodingQuality.format
+        ) else { return }
 
         let asset = AVURLAsset(url: url)
 

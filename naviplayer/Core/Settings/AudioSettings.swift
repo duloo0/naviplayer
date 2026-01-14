@@ -31,6 +31,70 @@ enum NormalizationMode: String, CaseIterable, Identifiable {
     }
 }
 
+// MARK: - Transcoding Quality
+enum TranscodingQuality: String, CaseIterable, Identifiable, Codable {
+    case original = "Original"
+    case high = "High Quality"
+    case balanced = "Balanced"
+    case dataSaver = "Data Saver"
+
+    var id: String { rawValue }
+
+    var displayName: String { rawValue }
+
+    var description: String {
+        switch self {
+        case .original:
+            return "Stream original files (WiFi recommended)"
+        case .high:
+            return "AAC 256 kbps (excellent quality, smaller)"
+        case .balanced:
+            return "Opus 128 kbps (good quality, data efficient)"
+        case .dataSaver:
+            return "Opus 96 kbps (saves bandwidth)"
+        }
+    }
+
+    var maxBitRate: Int? {
+        switch self {
+        case .original:
+            return nil
+        case .high:
+            return 256
+        case .balanced:
+            return 128
+        case .dataSaver:
+            return 96
+        }
+    }
+
+    var format: String? {
+        switch self {
+        case .original:
+            return nil
+        case .high:
+            return "aac"
+        case .balanced:
+            return "opus"
+        case .dataSaver:
+            return "opus"
+        }
+    }
+
+    var formatDisplayName: String {
+        switch self {
+        case .original:
+            return "Original"
+        case .high:
+            return "AAC 256"
+        case .balanced:
+            return "Opus 128"
+        case .dataSaver:
+            return "Opus 96"
+        }
+    }
+}
+
 // MARK: - Audio Settings
 @MainActor
 final class AudioSettings: ObservableObject {
@@ -50,11 +114,16 @@ final class AudioSettings: ObservableObject {
         didSet { saveSettings() }
     }
 
+    @Published var transcodingQuality: TranscodingQuality {
+        didSet { saveSettings() }
+    }
+
     // MARK: - UserDefaults Keys
     private enum Keys {
         static let normalizationMode = "NaviPlayer.Audio.NormalizationMode"
         static let preampGain = "NaviPlayer.Audio.PreampGain"
         static let preventClipping = "NaviPlayer.Audio.PreventClipping"
+        static let transcodingQuality = "NaviPlayer.Audio.TranscodingQuality"
     }
 
     // MARK: - Initialization
@@ -69,6 +138,13 @@ final class AudioSettings: ObservableObject {
 
         self.preampGain = UserDefaults.standard.object(forKey: Keys.preampGain) as? Double ?? 0.0
         self.preventClipping = UserDefaults.standard.object(forKey: Keys.preventClipping) as? Bool ?? true
+
+        if let qualityString = UserDefaults.standard.string(forKey: Keys.transcodingQuality),
+           let quality = TranscodingQuality(rawValue: qualityString) {
+            self.transcodingQuality = quality
+        } else {
+            self.transcodingQuality = .original // Default to original quality
+        }
     }
 
     // MARK: - Persistence
@@ -76,6 +152,7 @@ final class AudioSettings: ObservableObject {
         UserDefaults.standard.set(normalizationMode.rawValue, forKey: Keys.normalizationMode)
         UserDefaults.standard.set(preampGain, forKey: Keys.preampGain)
         UserDefaults.standard.set(preventClipping, forKey: Keys.preventClipping)
+        UserDefaults.standard.set(transcodingQuality.rawValue, forKey: Keys.transcodingQuality)
     }
 
     // MARK: - Gain Calculation

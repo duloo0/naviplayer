@@ -97,7 +97,8 @@ struct NowPlayingView: View {
                     track: track,
                     outputDevice: AudioEngine.shared.currentOutputDevice,
                     isShuffleMode: viewModel.shuffleEnabled,
-                    isAlbumPlayback: AudioEngine.shared.isAlbumPlayback
+                    isAlbumPlayback: AudioEngine.shared.isAlbumPlayback,
+                    transcodingQuality: AudioEngine.shared.currentTranscodingQuality
                 )
 
                 Spacer().frame(height: 12)
@@ -430,7 +431,11 @@ struct NowPlayingView: View {
             Spacer()
 
             // Audio quality badge (center)
-            QualityBadge(track: track, showSpecs: false)
+            QualityBadge(
+                track: track,
+                showSpecs: false,
+                transcodingQuality: AudioEngine.shared.currentTranscodingQuality
+            )
 
             Spacer()
 

@@ -222,7 +222,10 @@ struct QueueView: View {
                     .foregroundColor(Color.Text.tertiary)
 
                 // Quality badge
-                QualityTierBadge(track: track)
+                QualityTierBadge(
+                    track: track,
+                    transcodingQuality: AudioEngine.shared.currentTranscodingQuality
+                )
             }
         }
         .buttonStyle(.plain)
