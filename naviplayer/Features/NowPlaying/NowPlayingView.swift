@@ -30,6 +30,10 @@ struct NowPlayingView: View {
         .gesture(
             DragGesture()
                 .onChanged { value in
+                    // Reset scrubbing state if dismiss gesture activates (slider lost focus)
+                    if isScrubbing {
+                        isScrubbing = false
+                    }
                     // Only allow dragging down
                     if value.translation.height > 0 {
                         dragOffset = value.translation.height
@@ -57,6 +61,10 @@ struct NowPlayingView: View {
             }
         }
         .preferredColorScheme(.dark)
+        .onChange(of: viewModel.currentTrack?.id) { _, _ in
+            // Reset scrubbing state when track changes to prevent stale position display
+            isScrubbing = false
+        }
     }
 
     // MARK: - Content View
