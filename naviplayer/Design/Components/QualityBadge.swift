@@ -371,6 +371,161 @@ private struct SignalPathArrow: View {
     }
 }
 
+// MARK: - Expandable Quality Badge (for Now Playing bottom bar)
+struct ExpandableQualityBadge: View {
+    let track: Track
+    let outputDevice: String
+    let isShuffleMode: Bool
+    let isAlbumPlayback: Bool
+    let transcodingQuality: TranscodingQuality?
+    @State private var isExpanded = false
+
+    init(
+        track: Track,
+        outputDevice: String = "Device",
+        isShuffleMode: Bool = false,
+        isAlbumPlayback: Bool = false,
+        transcodingQuality: TranscodingQuality? = nil
+    ) {
+        self.track = track
+        self.outputDevice = outputDevice
+        self.isShuffleMode = isShuffleMode
+        self.isAlbumPlayback = isAlbumPlayback
+        self.transcodingQuality = transcodingQuality
+    }
+
+    private var signalPath: SignalPath {
+        SignalPath.build(
+            from: track,
+            outputDevice: outputDevice,
+            isShuffleMode: isShuffleMode,
+            isAlbumPlayback: isAlbumPlayback,
+            transcodingQuality: transcodingQuality
+        )
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Expanded: Signal path stages (appears above the badge)
+            if isExpanded {
+                expandedContent
+                    .transition(.opacity.combined(with: .move(edge: .bottom)))
+            }
+
+            // Collapsed/Always visible: Quality badge button
+            badgeButton
+        }
+        .animation(.Navi.smooth, value: isExpanded)
+    }
+
+    private var badgeButton: some View {
+        Button {
+            isExpanded.toggle()
+        } label: {
+            HStack(spacing: Spacing.sm) {
+                // Quality indicator dot
+                Circle()
+                    .fill(signalPath.overallQuality.color)
+                    .frame(width: 8, height: 8)
+                    .shadow(color: signalPath.overallQuality.color.opacity(0.5), radius: 4)
+
+                // Quality badge
+                QualityBadge(track: track, showSpecs: false, transcodingQuality: transcodingQuality)
+
+                // Expand/collapse chevron
+                Image(systemName: isExpanded ? "chevron.down" : "chevron.up")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundColor(Color.Text.tertiary)
+            }
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var expandedContent: some View {
+        VStack(spacing: 0) {
+            // Header
+            HStack {
+                Text("Signal Path")
+                    .font(.Navi.labelMedium)
+                    .foregroundColor(Color.Text.primary)
+
+                Text("•")
+                    .foregroundColor(Color.Text.tertiary)
+
+                Text(signalPath.overallQuality.label)
+                    .font(.Navi.caption)
+                    .foregroundColor(signalPath.overallQuality.color)
+
+                Spacer()
+            }
+            .padding(.bottom, Spacing.sm)
+
+            // Signal path stages
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(Array(signalPath.stages.enumerated()), id: \.element.id) { index, stage in
+                    HStack(alignment: .top, spacing: Spacing.md) {
+                        // Quality indicator line
+                        VStack(spacing: 0) {
+                            if index > 0 {
+                                Rectangle()
+                                    .fill(stage.quality.color.opacity(0.6))
+                                    .frame(width: 2, height: 6)
+                            } else {
+                                Color.clear.frame(width: 2, height: 6)
+                            }
+
+                            Circle()
+                                .fill(stage.quality.color)
+                                .frame(width: 8, height: 8)
+                                .shadow(color: stage.quality.color.opacity(0.4), radius: 2)
+
+                            if index < signalPath.stages.count - 1 {
+                                Rectangle()
+                                    .fill(stage.quality.color.opacity(0.6))
+                                    .frame(width: 2, height: 16)
+                            }
+                        }
+                        .frame(width: 12)
+
+                        // Stage info
+                        VStack(alignment: .leading, spacing: 1) {
+                            HStack(spacing: Spacing.xs) {
+                                Image(systemName: stage.icon)
+                                    .font(.system(size: 10))
+                                    .foregroundColor(stage.quality.color)
+                                    .frame(width: 12)
+
+                                Text(stage.name)
+                                    .font(.Navi.captionSmall)
+                                    .foregroundColor(Color.Text.primary)
+
+                                Text(stage.detail)
+                                    .font(.Navi.monoSmall)
+                                    .foregroundColor(Color.Text.tertiary)
+                            }
+
+                            // Sample rate/bit depth if available
+                            if let specs = stage.formattedSpecs {
+                                Text(specs)
+                                    .font(.Navi.monoSmall)
+                                    .foregroundColor(Color.Text.tertiary.opacity(0.7))
+                                    .padding(.leading, 12 + Spacing.xs)
+                            }
+                        }
+                        .padding(.bottom, index < signalPath.stages.count - 1 ? Spacing.xs : 0)
+
+                        Spacer()
+                    }
+                }
+            }
+        }
+        .padding(Spacing.md)
+        .background(Color.Background.surface)
+        .cornerRadius(CornerRadius.md)
+        .padding(.bottom, Spacing.sm)
+    }
+}
+
 // MARK: - Preview
 #if DEBUG
 struct QualityBadge_Previews: PreviewProvider {

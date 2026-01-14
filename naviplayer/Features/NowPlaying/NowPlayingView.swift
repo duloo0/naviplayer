@@ -90,18 +90,7 @@ struct NowPlayingView: View {
                 // Track info with thumbs rating
                 trackInfoView(track: track)
 
-                Spacer().frame(height: 12)
-
-                // Signal path visualization
-                EnhancedSignalPathView(
-                    track: track,
-                    outputDevice: AudioEngine.shared.currentOutputDevice,
-                    isShuffleMode: viewModel.shuffleEnabled,
-                    isAlbumPlayback: AudioEngine.shared.isAlbumPlayback,
-                    transcodingQuality: AudioEngine.shared.currentTranscodingQuality
-                )
-
-                Spacer().frame(height: 12)
+                Spacer().frame(height: 16)
 
                 // Progress
                 progressView
@@ -412,43 +401,47 @@ struct NowPlayingView: View {
     // MARK: - Bottom Info Bar
 
     private func bottomInfoBar(track: Track) -> some View {
-        HStack(spacing: 0) {
-            // Queue button with count (left)
-            Button {
-                showQueue = true
-            } label: {
-                HStack(spacing: 4) {
-                    Text("\(AudioEngine.shared.queue.count)")
-                        .font(.system(size: 14, weight: .semibold))
-                    Image(systemName: "list.bullet")
-                        .font(.system(size: 16))
-                }
-                .foregroundColor(.white.opacity(0.6))
-            }
-            .buttonStyle(.plain)
-            .frame(width: 80, alignment: .leading)
-
-            Spacer()
-
-            // Audio quality badge (center)
-            QualityBadge(
+        VStack(spacing: 0) {
+            // Expandable quality badge with signal path
+            ExpandableQualityBadge(
                 track: track,
-                showSpecs: false,
+                outputDevice: AudioEngine.shared.currentOutputDevice,
+                isShuffleMode: viewModel.shuffleEnabled,
+                isAlbumPlayback: AudioEngine.shared.isAlbumPlayback,
                 transcodingQuality: AudioEngine.shared.currentTranscodingQuality
             )
 
-            Spacer()
-
-            // Info button (right)
-            Button {
-                showTrackInfo = true
-            } label: {
-                Image(systemName: "info.circle")
-                    .font(.system(size: 20))
+            // Bottom row with queue and info buttons
+            HStack(spacing: 0) {
+                // Queue button with count (left)
+                Button {
+                    showQueue = true
+                } label: {
+                    HStack(spacing: 4) {
+                        Text("\(AudioEngine.shared.queue.count)")
+                            .font(.system(size: 14, weight: .semibold))
+                        Image(systemName: "list.bullet")
+                            .font(.system(size: 16))
+                    }
                     .foregroundColor(.white.opacity(0.6))
+                }
+                .buttonStyle(.plain)
+                .frame(width: 80, alignment: .leading)
+
+                Spacer()
+
+                // Info button (right)
+                Button {
+                    showTrackInfo = true
+                } label: {
+                    Image(systemName: "info.circle")
+                        .font(.system(size: 20))
+                        .foregroundColor(.white.opacity(0.6))
+                }
+                .buttonStyle(.plain)
+                .frame(width: 80, alignment: .trailing)
             }
-            .buttonStyle(.plain)
-            .frame(width: 80, alignment: .trailing)
+            .padding(.top, Spacing.sm)
         }
         .padding(.vertical, 8)
     }
