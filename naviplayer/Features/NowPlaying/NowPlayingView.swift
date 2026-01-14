@@ -264,25 +264,48 @@ struct NowPlayingView: View {
 
     private var progressView: some View {
         VStack(spacing: 6) {
-            Slider(
-                value: Binding(
-                    get: { isScrubbing ? scrubPosition : viewModel.currentTime },
-                    set: { newValue in
-                        scrubPosition = newValue
-                    }
-                ),
-                in: 0...max(safeDuration, 1),
-                onEditingChanged: { editing in
-                    if editing {
-                        isScrubbing = true
-                        scrubPosition = viewModel.currentTime
-                    } else {
-                        isScrubbing = false
-                        viewModel.seek(to: scrubPosition)
-                    }
+            // Custom slider using DragGesture for reliable onEnded handling
+            GeometryReader { geometry in
+                let width = geometry.size.width
+                let displayProgress = isScrubbing ? scrubPosition / max(safeDuration, 1) : viewModel.currentTime / max(safeDuration, 1)
+                let clampedProgress = min(max(displayProgress, 0), 1)
+
+                ZStack(alignment: .leading) {
+                    // Track background
+                    Capsule()
+                        .fill(Color.white.opacity(0.3))
+                        .frame(height: 4)
+
+                    // Progress fill
+                    Capsule()
+                        .fill(Color.white)
+                        .frame(width: width * clampedProgress, height: 4)
+
+                    // Thumb
+                    Circle()
+                        .fill(Color.white)
+                        .frame(width: isScrubbing ? 16 : 12, height: isScrubbing ? 16 : 12)
+                        .offset(x: width * clampedProgress - (isScrubbing ? 8 : 6))
+                        .shadow(color: .black.opacity(0.3), radius: 2, y: 1)
                 }
-            )
-            .tint(.white)
+                .contentShape(Rectangle())
+                .gesture(
+                    DragGesture(minimumDistance: 0)
+                        .onChanged { value in
+                            isScrubbing = true
+                            let progress = value.location.x / width
+                            scrubPosition = min(max(progress, 0), 1) * safeDuration
+                        }
+                        .onEnded { value in
+                            let progress = value.location.x / width
+                            let finalTime = min(max(progress, 0), 1) * safeDuration
+                            viewModel.seek(to: finalTime)
+                            isScrubbing = false
+                        }
+                )
+                .animation(.easeOut(duration: 0.1), value: isScrubbing)
+            }
+            .frame(height: 20)
             .disabled(viewModel.duration <= 0.5)
 
             HStack {
