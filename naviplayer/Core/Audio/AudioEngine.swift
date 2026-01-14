@@ -613,7 +613,7 @@ final class AudioEngine: ObservableObject {
 
             // Only cache if still in queue and not cancelled
             if queue.contains(where: { $0.id == track.id }) && !Task.isCancelled {
-                configurePlayerItem(item, for: track, applyReplayGain: false)
+                configurePlayerItem(item, for: track, shouldApplyReplayGain: false)
                 playerItems[track.id] = item
             }
         } catch {
