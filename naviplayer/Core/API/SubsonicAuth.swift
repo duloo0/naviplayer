@@ -75,6 +75,11 @@ extension ServerConfiguration {
         if let format = format {
             params["format"] = format
         }
+        // Add estimateContentLength when transcoding - required for iOS AVPlayer
+        // Without Content-Length, AVPlayer fails with "Cannot Open" errors
+        if maxBitRate != nil || format != nil {
+            params["estimateContentLength"] = "true"
+        }
         return buildURL(endpoint: "stream", parameters: params)
     }
 
