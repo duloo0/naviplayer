@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import Combine
 
 struct NowPlayingView: View {
     @StateObject private var viewModel = NowPlayingViewModel()
@@ -15,6 +16,7 @@ struct NowPlayingView: View {
     @State private var scrubPosition: Double = 0
     @State private var showQueue = false
     @State private var showTrackInfo = false
+    @StateObject private var timingViewModel = NowPlayingTimingViewModel()
     @State private var dragOffset: CGFloat = 0
     @State private var thumbUpScale: CGFloat = 1.0
     @State private var thumbDownScale: CGFloat = 1.0
@@ -267,7 +269,7 @@ struct NowPlayingView: View {
             // Custom slider using DragGesture for reliable onEnded handling
             GeometryReader { geometry in
                 let width = geometry.size.width
-                let displayProgress = isScrubbing ? scrubPosition / max(safeDuration, 1) : viewModel.currentTime / max(safeDuration, 1)
+                let displayProgress = isScrubbing ? scrubPosition / max(safeDuration, 1) : timingViewModel.currentTime / max(safeDuration, 1)
                 let clampedProgress = min(max(displayProgress, 0), 1)
 
                 ZStack(alignment: .leading) {
@@ -306,15 +308,15 @@ struct NowPlayingView: View {
                 .animation(.easeOut(duration: 0.1), value: isScrubbing)
             }
             .frame(height: 20)
-            .disabled(viewModel.duration <= 0.5)
+            .disabled(timingViewModel.duration <= 0.5)
 
             HStack {
-                Text(formatTime(isScrubbing ? scrubPosition : viewModel.currentTime))
+                Text(formatTime(isScrubbing ? scrubPosition : timingViewModel.currentTime))
                     .font(.caption)
                     .foregroundColor(.white.opacity(0.7))
                     .monospacedDigit()
                 Spacer()
-                Text("-\(formatTime(max(0, safeDuration - (isScrubbing ? scrubPosition : viewModel.currentTime))))")
+                Text("-\(formatTime(max(0, safeDuration - (isScrubbing ? scrubPosition : timingViewModel.currentTime))))")
                     .font(.caption)
                     .foregroundColor(.white.opacity(0.7))
                     .monospacedDigit()
@@ -466,7 +468,7 @@ struct NowPlayingView: View {
     // MARK: - Helpers
 
     private var safeDuration: TimeInterval {
-        let d = viewModel.duration
+        let d = timingViewModel.duration
         guard d.isFinite && d > 0 else { return 1 }
         return d
     }
@@ -477,6 +479,24 @@ struct NowPlayingView: View {
         let minutes = total / 60
         let remaining = total % 60
         return String(format: "%d:%02d", minutes, remaining)
+    }
+}
+
+@MainActor
+final class NowPlayingTimingViewModel: ObservableObject {
+    @Published var currentTime: TimeInterval = 0
+    @Published var duration: TimeInterval = 0
+
+    private let audioEngine = AudioEngine.shared
+
+    init() {
+        audioEngine.$currentTime
+            .receive(on: DispatchQueue.main)
+            .assign(to: &$currentTime)
+
+        audioEngine.$duration
+            .receive(on: DispatchQueue.main)
+            .assign(to: &$duration)
     }
 }
 

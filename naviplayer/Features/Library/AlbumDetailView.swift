@@ -28,7 +28,8 @@ struct AlbumDetailView: View {
                     .progressViewStyle(CircularProgressViewStyle(tint: Color.Accent.cyan))
             } else if let album = viewModel.album {
                 ScrollView(showsIndicators: false) {
-                    VStack(spacing: 0) {
+                    LazyVStack(spacing: 0) {
+
                         // Album header
                         albumHeader(album)
 
@@ -185,7 +186,8 @@ struct AlbumDetailView: View {
 
     // MARK: - Track List
     private func trackList(_ album: Album) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
+        LazyVStack(alignment: .leading, spacing: 0) {
+
             // Section header
             HStack {
                 Text("TRACKS")

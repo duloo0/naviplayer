@@ -13,10 +13,8 @@ final class NowPlayingViewModel: ObservableObject {
     // MARK: - Published Properties (forwarded from AudioEngine)
     @Published var currentTrack: Track?
     @Published var playbackState: PlaybackState = .stopped
-    @Published var progress: Double = 0
-    @Published var duration: TimeInterval = 0
-    @Published var currentTime: TimeInterval = 0
     @Published var lyrics: StructuredLyrics?
+
     @Published var isLoved: Bool = false
     @Published var isBuffering: Bool = false
 
@@ -84,21 +82,10 @@ final class NowPlayingViewModel: ObservableObject {
             .receive(on: DispatchQueue.main)
             .assign(to: &$playbackState)
 
-        audioEngine.$progress
-            .receive(on: DispatchQueue.main)
-            .assign(to: &$progress)
-
-        audioEngine.$duration
-            .receive(on: DispatchQueue.main)
-            .assign(to: &$duration)
-
-        audioEngine.$currentTime
-            .receive(on: DispatchQueue.main)
-            .assign(to: &$currentTime)
-
         audioEngine.$isBuffering
             .receive(on: DispatchQueue.main)
             .assign(to: &$isBuffering)
+
 
         audioEngine.$shuffleEnabled
             .receive(on: DispatchQueue.main)

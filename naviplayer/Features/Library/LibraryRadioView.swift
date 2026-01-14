@@ -51,7 +51,8 @@ struct LibraryRadioView: View {
                 loadingView
             } else if let track = viewModel.currentTrack {
                 ScrollView(showsIndicators: false) {
-                    VStack(spacing: 0) {
+                    LazyVStack(spacing: 0) {
+
                         // Current track card
                         currentTrackSection(track: track)
                             .padding(.top, Spacing.lg)

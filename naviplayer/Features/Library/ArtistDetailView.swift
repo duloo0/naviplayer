@@ -28,7 +28,8 @@ struct ArtistDetailView: View {
                     .progressViewStyle(CircularProgressViewStyle(tint: Color.Accent.cyan))
             } else if let artist = viewModel.artist {
                 ScrollView(showsIndicators: false) {
-                    VStack(spacing: 0) {
+                    LazyVStack(spacing: 0) {
+
                         // Hero header
                         artistHero(artist)
 
