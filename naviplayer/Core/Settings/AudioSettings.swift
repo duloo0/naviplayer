@@ -47,11 +47,11 @@ enum TranscodingQuality: String, CaseIterable, Identifiable, Codable {
         case .original:
             return "Stream original files (WiFi recommended)"
         case .high:
-            return "AAC 256 kbps (excellent quality, smaller)"
+            return "MP3 320 kbps (excellent quality)"
         case .balanced:
-            return "Opus 128 kbps (good quality, data efficient)"
+            return "MP3 192 kbps (good quality, data efficient)"
         case .dataSaver:
-            return "Opus 96 kbps (saves bandwidth)"
+            return "MP3 128 kbps (saves bandwidth)"
         }
     }
 
@@ -60,11 +60,11 @@ enum TranscodingQuality: String, CaseIterable, Identifiable, Codable {
         case .original:
             return nil
         case .high:
-            return 256
+            return 320
         case .balanced:
-            return 128
+            return 192
         case .dataSaver:
-            return 96
+            return 128
         }
     }
 
@@ -73,11 +73,11 @@ enum TranscodingQuality: String, CaseIterable, Identifiable, Codable {
         case .original:
             return nil
         case .high:
-            return "aac"
+            return "mp3"
         case .balanced:
-            return "opus"
+            return "mp3"
         case .dataSaver:
-            return "opus"
+            return "mp3"
         }
     }
 
@@ -86,11 +86,11 @@ enum TranscodingQuality: String, CaseIterable, Identifiable, Codable {
         case .original:
             return "Original"
         case .high:
-            return "AAC 256"
+            return "MP3 320"
         case .balanced:
-            return "Opus 128"
+            return "MP3 192"
         case .dataSaver:
-            return "Opus 96"
+            return "MP3 128"
         }
     }
 }
