@@ -505,12 +505,19 @@ final class AudioEngine: ObservableObject {
         }
     }
 
-    private func configurePlayerItem(_ item: AVPlayerItem, for track: Track) {
+    private func configurePlayerItem(
+        _ item: AVPlayerItem,
+        for track: Track,
+        applyReplayGain: Bool = true
+    ) {
         item.preferredForwardBufferDuration = recommendedBufferDuration
 
-        // Apply ReplayGain normalization if enabled
-        applyReplayGain(to: item, for: track)
+        if applyReplayGain {
+            // Apply ReplayGain normalization if enabled
+            applyReplayGain(to: item, for: track)
+        }
     }
+
 
     /// Apply ReplayGain volume adjustment to a player item
     private func applyReplayGain(to item: AVPlayerItem, for track: Track) {
@@ -588,6 +595,12 @@ final class AudioEngine: ObservableObject {
         }
     }
 
+    private nonisolated func buildPlayerItem(for url: URL) async throws -> AVPlayerItem {
+        let asset = AVURLAsset(url: url)
+        _ = try await asset.load(.isPlayable, .duration)
+        return AVPlayerItem(asset: asset)
+    }
+
     private func preloadTrack(_ track: Track) async {
         guard let url = client.streamURL(
             for: track,
@@ -595,23 +608,19 @@ final class AudioEngine: ObservableObject {
             format: audioSettings.transcodingQuality.format
         ) else { return }
 
-        let asset = AVURLAsset(url: url)
-
-        // Load asset asynchronously
         do {
-            _ = try await asset.load(.isPlayable, .duration)
+            let item = try await buildPlayerItem(for: url)
 
             // Only cache if still in queue and not cancelled
             if queue.contains(where: { $0.id == track.id }) && !Task.isCancelled {
-                let item = AVPlayerItem(asset: asset)
-                configurePlayerItem(item, for: track)
+                configurePlayerItem(item, for: track, applyReplayGain: false)
                 playerItems[track.id] = item
             }
-
         } catch {
             print("Failed to preload track \(track.id): \(error)")
         }
     }
+
 
     private func clearPreloads() {
         preloadTasks.values.forEach { $0.cancel() }
