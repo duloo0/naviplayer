@@ -494,6 +494,9 @@ final class AudioEngine: ObservableObject {
             hasTriggeredPreload = false
             hasInsertedNextItem = false
 
+            // Set up observers for the new current item so subsequent transitions work
+            observePlayerItem(currentItem, for: nextTrack)
+
             await updateNowPlaying(for: nextTrack)
             preloadUpcomingTracks()
         } else {
