@@ -6,26 +6,114 @@
 //
 
 import SwiftUI
+import Foundation
+import CryptoKit
 
 // MARK: - Image Cache
 actor ImageCache {
     static let shared = ImageCache()
 
-    private var cache: [URL: UIImage] = [:]
-    private let maxCacheSize = 100
+    private let memoryCache = NSCache<NSURL, UIImage>()
+    private let fileManager = FileManager.default
+    private let cacheDirectory: URL
+    private let maxDiskBytes: Int64 = 1_000_000_000
+    private let maxMemoryCount = 200
+    private let maxMemoryBytes = 100 * 1024 * 1024
+
+    init() {
+        cacheDirectory = fileManager.urls(for: .cachesDirectory, in: .userDomainMask)
+            .first!
+            .appendingPathComponent("com.naviplayer.artwork", isDirectory: true)
+
+        memoryCache.countLimit = maxMemoryCount
+        memoryCache.totalCostLimit = maxMemoryBytes
+
+        try? fileManager.createDirectory(at: cacheDirectory, withIntermediateDirectories: true)
+
+        Task { await pruneIfNeeded() }
+    }
 
     func image(for url: URL) -> UIImage? {
-        cache[url]
+        let key = url as NSURL
+        if let cached = memoryCache.object(forKey: key) {
+            return cached
+        }
+
+        let fileURL = cacheFileURL(for: url)
+        guard let data = try? Data(contentsOf: fileURL),
+              let image = UIImage(data: data) else {
+            return nil
+        }
+
+        memoryCache.setObject(image, forKey: key, cost: data.count)
+        touchFile(fileURL)
+        return image
     }
 
     func setImage(_ image: UIImage, for url: URL) {
-        // Evict oldest if at capacity
-        if cache.count >= maxCacheSize {
-            cache.removeValue(forKey: cache.keys.first!)
+        let key = url as NSURL
+        if let data = image.jpegData(compressionQuality: 0.9) {
+            memoryCache.setObject(image, forKey: key, cost: data.count)
+            let fileURL = cacheFileURL(for: url)
+            try? data.write(to: fileURL, options: .atomic)
+            touchFile(fileURL)
+            Task { await pruneIfNeeded() }
+        } else {
+            memoryCache.setObject(image, forKey: key, cost: 0)
         }
-        cache[url] = image
+    }
+
+    private func cacheFileURL(for url: URL) -> URL {
+        cacheDirectory
+            .appendingPathComponent(cacheKey(for: url))
+            .appendingPathExtension("jpg")
+    }
+
+    private func cacheKey(for url: URL) -> String {
+        let data = Data(url.absoluteString.utf8)
+        let digest = SHA256.hash(data: data)
+        return digest.map { String(format: "%02x", $0) }.joined()
+    }
+
+    private func touchFile(_ url: URL) {
+        try? fileManager.setAttributes([.modificationDate: Date()], ofItemAtPath: url.path)
+    }
+
+    private func pruneIfNeeded() async {
+        guard let files = try? fileManager.contentsOfDirectory(
+            at: cacheDirectory,
+            includingPropertiesForKeys: [.contentModificationDateKey, .fileSizeKey],
+            options: .skipsHiddenFiles
+        ) else {
+            return
+        }
+
+        var entries: [(url: URL, size: Int64, date: Date)] = []
+        var totalSize: Int64 = 0
+
+        for fileURL in files {
+            let values = try? fileURL.resourceValues(forKeys: [.contentModificationDateKey, .fileSizeKey])
+            let size = Int64(values?.fileSize ?? 0)
+            let date = values?.contentModificationDate ?? .distantPast
+            totalSize += size
+            entries.append((fileURL, size, date))
+        }
+
+        guard totalSize > maxDiskBytes else { return }
+
+        entries.sort { $0.date < $1.date }
+        var currentSize = totalSize
+
+        for entry in entries {
+            try? fileManager.removeItem(at: entry.url)
+            currentSize -= entry.size
+            if currentSize <= maxDiskBytes {
+                break
+            }
+        }
     }
 }
+
 
 // MARK: - Cached Image View
 struct CachedAsyncImage: View {

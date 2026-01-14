@@ -178,6 +178,7 @@ final class AudioEngine: ObservableObject {
         // Create player
         player = AVQueuePlayer()
         player?.actionAtItemEnd = .advance
+        player?.automaticallyWaitsToMinimizeStalling = true
 
         // Setup time observer
         setupTimeObserver()
@@ -186,6 +187,7 @@ final class AudioEngine: ObservableObject {
         await loadCurrentTrack()
         preloadUpcomingTracks()
     }
+
 
     /// Add tracks to end of queue
     func addToQueue(_ tracks: [Track]) {
@@ -369,6 +371,7 @@ final class AudioEngine: ObservableObject {
         let playerItem: AVPlayerItem
         if let cached = playerItems[track.id] {
             playerItem = cached
+            configurePlayerItem(playerItem)
         } else {
             guard let url = client.streamURL(for: track) else {
                 print("Failed to get stream URL for track: \(track.id)")
@@ -378,11 +381,13 @@ final class AudioEngine: ObservableObject {
 
             let asset = AVURLAsset(url: url)
             playerItem = AVPlayerItem(asset: asset)
+            configurePlayerItem(playerItem)
             playerItems[track.id] = playerItem
         }
 
         // Setup item observer
         observePlayerItem(playerItem, for: track)
+
 
         // Replace current item
         player?.removeAllItems()
@@ -480,7 +485,24 @@ final class AudioEngine: ObservableObject {
         }
     }
 
+    private func configurePlayerItem(_ item: AVPlayerItem) {
+        item.preferredForwardBufferDuration = recommendedBufferDuration
+    }
+
+    private var recommendedBufferDuration: TimeInterval {
+        if !networkMonitor.isConnected {
+            return 0
+        }
+
+        if networkMonitor.isConstrained || networkMonitor.isExpensive {
+            return 6
+        }
+
+        return 15
+    }
+
     // MARK: - Pre-caching
+
 
     private func preloadUpcomingTracks() {
         // Cancel old preload tasks
@@ -516,8 +538,10 @@ final class AudioEngine: ObservableObject {
             // Only cache if still in queue and not cancelled
             if queue.contains(where: { $0.id == track.id }) && !Task.isCancelled {
                 let item = AVPlayerItem(asset: asset)
+                configurePlayerItem(item)
                 playerItems[track.id] = item
             }
+
         } catch {
             print("Failed to preload track \(track.id): \(error)")
         }
@@ -527,16 +551,28 @@ final class AudioEngine: ObservableObject {
         preloadTasks.values.forEach { $0.cancel() }
         preloadTasks.removeAll()
 
-        // Keep only current track's item
-        if let currentId = currentTrack?.id {
-            let currentItem = playerItems[currentId]
-            playerItems.removeAll()
-            if let item = currentItem {
-                playerItems[currentId] = item
+        // Keep current + next two items to reduce gaps
+        let keepIds: [String] = {
+            guard let currentId = currentTrack?.id else { return [] }
+            var ids = [currentId]
+            let nextIndices = [currentIndex + 1, currentIndex + 2]
+            for index in nextIndices where index < queue.count {
+                ids.append(queue[index].id)
             }
+            return ids
+        }()
+
+        if !keepIds.isEmpty {
+            let preserved = keepIds.reduce(into: [String: AVPlayerItem]()) { result, id in
+                if let item = playerItems[id] {
+                    result[id] = item
+                }
+            }
+            playerItems = preserved
         } else {
             playerItems.removeAll()
         }
+
     }
 
     // MARK: - Time Observer
@@ -557,17 +593,18 @@ final class AudioEngine: ObservableObject {
                 if self.duration > 0 {
                     self.progress = time.seconds / self.duration
 
-                    // Trigger preload when 80% through current track
-                    if self.progress > 0.8 && !self.hasTriggeredPreload {
+                    // Trigger preload when 70% through current track
+                    if self.progress > 0.7 && !self.hasTriggeredPreload {
                         self.hasTriggeredPreload = true
                         self.preloadUpcomingTracks()
                     }
 
-                    // Insert preloaded item into queue when 95% through
-                    if self.progress > 0.95 && !self.hasInsertedNextItem {
+                    // Insert preloaded item into queue when 90% through
+                    if self.progress > 0.9 && !self.hasInsertedNextItem {
                         self.hasInsertedNextItem = true
                         self.ensureNextItemInQueue()
                     }
+
                 }
 
                 // Update now playing less frequently
@@ -602,9 +639,11 @@ final class AudioEngine: ObservableObject {
         } else if let url = client.streamURL(for: nextTrack) {
             let asset = AVURLAsset(url: url)
             let item = AVPlayerItem(asset: asset)
+            configurePlayerItem(item)
             playerItems[nextTrack.id] = item
             player.insert(item, after: nil)
         }
+
     }
 
     private func removeTimeObserver() {
@@ -638,13 +677,22 @@ final class AudioEngine: ObservableObject {
     }
 
     private func loadImage(from url: URL) async -> UIImage? {
+        if let cached = await ImageCache.shared.image(for: url) {
+            return cached
+        }
+
         do {
             let (data, _) = try await URLSession.shared.data(from: url)
-            return UIImage(data: data)
+            if let image = UIImage(data: data) {
+                await ImageCache.shared.setImage(image, for: url)
+                return image
+            }
+            return nil
         } catch {
             return nil
         }
     }
+
 }
 
 // MARK: - Convenience Extensions
