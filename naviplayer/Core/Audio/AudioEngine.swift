@@ -508,11 +508,11 @@ final class AudioEngine: ObservableObject {
     private func configurePlayerItem(
         _ item: AVPlayerItem,
         for track: Track,
-        applyReplayGain: Bool = true
+        shouldApplyReplayGain: Bool = true
     ) {
         item.preferredForwardBufferDuration = recommendedBufferDuration
 
-        if applyReplayGain {
+        if shouldApplyReplayGain {
             // Apply ReplayGain normalization if enabled
             applyReplayGain(to: item, for: track)
         }

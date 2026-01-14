@@ -579,7 +579,7 @@ final class ArtistDetailViewModel: ObservableObject {
 
     func startRadio() async {
         // Could use getSimilarSongs2 or getTopSongs
-        guard let artist = artist else { return }
+        guard artist != nil else { return }
 
         do {
             // Get top songs for artist as radio seed
@@ -593,6 +593,7 @@ final class ArtistDetailViewModel: ObservableObject {
             print("Failed to start radio")
         }
     }
+
 }
 
 // MARK: - Preview

@@ -115,11 +115,12 @@ struct LyricsDisplay {
 
     /// Check if a line is active at current time
     func isLineActive(_ line: LyricLine) -> Bool {
-        guard let lineStart = line.startTime else { return false }
+        guard line.startTime != nil else { return false }
         guard let activeIndex = activeLineIndex else { return false }
         guard let lineIndex = lyrics.lines.firstIndex(where: { $0.id == line.id }) else { return false }
         return lineIndex == activeIndex
     }
+
 
     /// Check if a line has already passed
     func isLinePassed(_ line: LyricLine) -> Bool {
