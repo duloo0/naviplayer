@@ -656,6 +656,8 @@ struct SearchView: View {
 
 // MARK: - Settings View
 struct SettingsView: View {
+    @ObservedObject private var audioSettings = AudioSettings.shared
+
     var body: some View {
         ZStack {
             Color.Background.default
@@ -691,6 +693,42 @@ struct SettingsView: View {
                         }
                     } header: {
                         Text("Connection")
+                    }
+
+                    // Audio normalization settings
+                    Section {
+                        Picker("Normalization", selection: $audioSettings.normalizationMode) {
+                            ForEach(NormalizationMode.allCases) { mode in
+                                Text(mode.rawValue).tag(mode)
+                            }
+                        }
+
+                        if audioSettings.normalizationMode != .off {
+                            Text(audioSettings.normalizationMode.description)
+                                .font(.caption)
+                                .foregroundColor(Color.Text.tertiary)
+
+                            // Preamp adjustment
+                            VStack(alignment: .leading, spacing: 4) {
+                                HStack {
+                                    Text("Preamp")
+                                    Spacer()
+                                    Text(String(format: "%+.1f dB", audioSettings.preampGain))
+                                        .font(.system(.body, design: .monospaced))
+                                        .foregroundColor(Color.Text.secondary)
+                                }
+                                Slider(value: $audioSettings.preampGain, in: -6...6, step: 0.5)
+                                    .tint(Color.Accent.cyan)
+                            }
+
+                            Toggle("Prevent Clipping", isOn: $audioSettings.preventClipping)
+                        }
+                    } header: {
+                        Text("Audio")
+                    } footer: {
+                        if audioSettings.normalizationMode != .off {
+                            Text("ReplayGain adjusts volume to normalize loudness across tracks. Prevent Clipping uses peak data to avoid distortion.")
+                        }
                     }
 
                     Section {

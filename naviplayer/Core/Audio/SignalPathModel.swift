@@ -74,7 +74,13 @@ struct SignalPath {
     let stages: [SignalPathStage]
     let overallQuality: SignalQuality
 
-    static func build(from track: Track, outputDevice: String) -> SignalPath {
+    /// Build signal path with full context for accurate ReplayGain display
+    static func build(
+        from track: Track,
+        outputDevice: String,
+        isShuffleMode: Bool = false,
+        isAlbumPlayback: Bool = false
+    ) -> SignalPath {
         var stages: [SignalPathStage] = []
         var lowestQuality: SignalQuality = .lossless
 
@@ -105,14 +111,33 @@ struct SignalPath {
             icon: "waveform"
         ))
 
-        // 3. ReplayGain (if present)
-        if let rg = track.replayGain {
-            let gainValue = rg.effectiveGain ?? 0
+        // 3. ReplayGain (only if normalization is enabled and track has RG data)
+        let audioSettings = AudioSettings.shared
+        if audioSettings.normalizationMode != .off,
+           let _ = track.replayGain,
+           let appliedGain = audioSettings.effectiveGain(
+               for: track,
+               isShuffleMode: isShuffleMode,
+               isAlbumPlayback: isAlbumPlayback
+           ) {
+            // Determine mode label
+            let modeLabel: String
+            switch audioSettings.normalizationMode {
+            case .smart:
+                modeLabel = isShuffleMode ? "Track" : (isAlbumPlayback ? "Album" : "Track")
+            case .trackGain:
+                modeLabel = "Track"
+            case .albumGain:
+                modeLabel = "Album"
+            case .off:
+                modeLabel = ""
+            }
+
             stages.append(SignalPathStage(
                 type: .replayGain,
                 name: "ReplayGain",
-                detail: String(format: "%+.1f dB", gainValue),
-                quality: .lossless, // ReplayGain is lossless
+                detail: String(format: "%+.1f dB (%@)", appliedGain, modeLabel),
+                quality: .lossless, // ReplayGain is lossless volume scaling
                 sampleRate: track.samplingRate,
                 bitDepth: track.bitDepth,
                 icon: "slider.horizontal.3"

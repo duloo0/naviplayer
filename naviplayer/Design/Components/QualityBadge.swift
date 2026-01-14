@@ -132,15 +132,29 @@ struct FormatDisplay: View {
 struct EnhancedSignalPathView: View {
     let track: Track
     let outputDevice: String
+    let isShuffleMode: Bool
+    let isAlbumPlayback: Bool
     @State private var isExpanded = false
 
-    init(track: Track, outputDevice: String = "Device") {
+    init(
+        track: Track,
+        outputDevice: String = "Device",
+        isShuffleMode: Bool = false,
+        isAlbumPlayback: Bool = false
+    ) {
         self.track = track
         self.outputDevice = outputDevice
+        self.isShuffleMode = isShuffleMode
+        self.isAlbumPlayback = isAlbumPlayback
     }
 
     private var signalPath: SignalPath {
-        SignalPath.build(from: track, outputDevice: outputDevice)
+        SignalPath.build(
+            from: track,
+            outputDevice: outputDevice,
+            isShuffleMode: isShuffleMode,
+            isAlbumPlayback: isAlbumPlayback
+        )
     }
 
     var body: some View {

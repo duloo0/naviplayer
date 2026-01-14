@@ -90,7 +90,17 @@ struct NowPlayingView: View {
                 // Track info with thumbs rating
                 trackInfoView(track: track)
 
-                Spacer().frame(height: 20)
+                Spacer().frame(height: 12)
+
+                // Signal path visualization
+                EnhancedSignalPathView(
+                    track: track,
+                    outputDevice: AudioEngine.shared.currentOutputDevice,
+                    isShuffleMode: viewModel.shuffleEnabled,
+                    isAlbumPlayback: AudioEngine.shared.isAlbumPlayback
+                )
+
+                Spacer().frame(height: 12)
 
                 // Progress
                 progressView

@@ -27,6 +27,7 @@ final class AudioEngine: ObservableObject {
     @Published private(set) var currentIndex: Int = 0
     @Published private(set) var shuffleEnabled = false
     @Published private(set) var repeatMode: RepeatMode = .off
+    @Published private(set) var isAlbumPlayback = false
 
     enum RepeatMode {
         case off
@@ -44,6 +45,7 @@ final class AudioEngine: ObservableObject {
     private let client = SubsonicClient.shared
     private let nowPlayingManager = NowPlayingManager()
     private let networkMonitor = NetworkMonitor.shared
+    private let audioSettings = AudioSettings.shared
     private var audioRouteObserver: AnyCancellable?
 
     // Adaptive pre-cache settings
@@ -165,7 +167,7 @@ final class AudioEngine: ObservableObject {
     // MARK: - Queue Management
 
     /// Set queue and start playback
-    func setQueue(_ tracks: [Track], startIndex: Int = 0) async {
+    func setQueue(_ tracks: [Track], startIndex: Int = 0, isAlbum: Bool? = nil) async {
         guard !tracks.isEmpty else { return }
 
         // Clear existing
@@ -174,6 +176,15 @@ final class AudioEngine: ObservableObject {
 
         queue = tracks
         currentIndex = min(startIndex, tracks.count - 1)
+
+        // Detect if this is album playback (all tracks from same album)
+        if let isAlbum = isAlbum {
+            isAlbumPlayback = isAlbum
+        } else {
+            // Auto-detect: check if all tracks share the same album ID
+            let albumIds = Set(tracks.compactMap { $0.albumId })
+            isAlbumPlayback = albumIds.count == 1 && !albumIds.isEmpty
+        }
 
         // Create player
         player = AVQueuePlayer()
@@ -371,7 +382,7 @@ final class AudioEngine: ObservableObject {
         let playerItem: AVPlayerItem
         if let cached = playerItems[track.id] {
             playerItem = cached
-            configurePlayerItem(playerItem)
+            configurePlayerItem(playerItem, for: track)
         } else {
             guard let url = client.streamURL(for: track) else {
                 print("Failed to get stream URL for track: \(track.id)")
@@ -381,7 +392,7 @@ final class AudioEngine: ObservableObject {
 
             let asset = AVURLAsset(url: url)
             playerItem = AVPlayerItem(asset: asset)
-            configurePlayerItem(playerItem)
+            configurePlayerItem(playerItem, for: track)
             playerItems[track.id] = playerItem
         }
 
@@ -485,8 +496,50 @@ final class AudioEngine: ObservableObject {
         }
     }
 
-    private func configurePlayerItem(_ item: AVPlayerItem) {
+    private func configurePlayerItem(_ item: AVPlayerItem, for track: Track) {
         item.preferredForwardBufferDuration = recommendedBufferDuration
+
+        // Apply ReplayGain normalization if enabled
+        applyReplayGain(to: item, for: track)
+    }
+
+    /// Apply ReplayGain volume adjustment to a player item
+    private func applyReplayGain(to item: AVPlayerItem, for track: Track) {
+        // Get the effective gain based on settings and playback context
+        guard let gainDB = audioSettings.effectiveGain(
+            for: track,
+            isShuffleMode: shuffleEnabled,
+            isAlbumPlayback: isAlbumPlayback
+        ) else { return }
+
+        // Determine which peak value to use for clipping prevention
+        let peak: Double?
+        switch audioSettings.normalizationMode {
+        case .albumGain:
+            peak = track.replayGain?.albumPeak ?? track.replayGain?.trackPeak
+        default:
+            peak = track.replayGain?.trackPeak ?? track.replayGain?.albumPeak
+        }
+
+        // Calculate linear gain with peak limiting
+        let linearGain = audioSettings.linearGain(fromDB: gainDB, peak: peak)
+
+        // Create AVAudioMix for volume adjustment
+        Task {
+            do {
+                let audioTracks = try await item.asset.loadTracks(withMediaType: .audio)
+                guard let audioTrack = audioTracks.first else { return }
+
+                let params = AVMutableAudioMixInputParameters(track: audioTrack)
+                params.setVolume(linearGain, at: .zero)
+
+                let audioMix = AVMutableAudioMix()
+                audioMix.inputParameters = [params]
+                item.audioMix = audioMix
+            } catch {
+                print("Failed to apply ReplayGain: \(error)")
+            }
+        }
     }
 
     private var recommendedBufferDuration: TimeInterval {
@@ -538,7 +591,7 @@ final class AudioEngine: ObservableObject {
             // Only cache if still in queue and not cancelled
             if queue.contains(where: { $0.id == track.id }) && !Task.isCancelled {
                 let item = AVPlayerItem(asset: asset)
-                configurePlayerItem(item)
+                configurePlayerItem(item, for: track)
                 playerItems[track.id] = item
             }
 
@@ -639,7 +692,7 @@ final class AudioEngine: ObservableObject {
         } else if let url = client.streamURL(for: nextTrack) {
             let asset = AVURLAsset(url: url)
             let item = AVPlayerItem(asset: asset)
-            configurePlayerItem(item)
+            configurePlayerItem(item, for: nextTrack)
             playerItems[nextTrack.id] = item
             player.insert(item, after: nil)
         }
